@@ -1,82 +1,46 @@
-# 🌐 Animated Portfolio Website
+# TALORA — Premium Digital Ecosystem
 
-A fully responsive and modern animated portfolio built with **React** and **Vite**, designed to showcase personal projects, skills, and experience in an elegant and engaging way.
+A fully responsive, animated company landing page for **TALORA** — a premium ecosystem connecting clients with skilled people. Built with vanilla HTML, CSS and JavaScript, animated with GSAP and AOS.
 
-## 🚀 Features
+## Features
 
-- 🎨 Smooth Animations & Transitions
-- 📱 Fully Responsive (Desktop, Tablet & Mobile)
-- 🖼️ Projects Showcase Section
-- 📧 Contact Form with Validation
-- 🢁 About Me Section with Skills
-- 🌙 Dark Mode Support 
-- ⚡ Built with React + Vite for fast performance
+- Smooth GSAP scroll-triggered animations and AOS reveals
+- Fully responsive layout (mobile, tablet and desktop)
+- Animated studio timeline and skills marquee
+- Interactive "Build With TALORA" orbital card system
+- Auto-rotating "Join TALORA" card
+- Contact form with audience selector plus GitHub / LinkedIn / Email cards
 
-## 📸 Demo
+## Tech Stack
 
-Live Website: [https://animated-portfolio-two-murex.vercel.app/](https://animated-portfolio-two-murex.vercel.app/)
+- **HTML5 / CSS3 / JavaScript (vanilla)**
+- **GSAP + ScrollTrigger** for scroll animations
+- **AOS** for on-scroll reveals
+- **Boxicons** for icons
 
-## 🛠️ Tech Stack
-
-- **Frontend:** React, Vite, TailwindCSS / SCSS / CSS3
-- **Animations:** Framer Motion / AOS (Animate on Scroll)
-- **Deployment:** Vercel / Netlify / GitHub Pages
-
-## 📂 Folder Structure
+## Project Structure
 
 ```
-📁 src/
- ├📁 assets/           # Images & media
- ├📁 components/       # Reusable UI components
- ├📁 pages/            # Sections like About, Projects, Contact
- ├📁 styles/           # CSS or Tailwind config
- ├📄 App.jsx           # Main app file
- └📄 main.jsx          # Entry point
+📁 Animated-Portfolio-main/
+ ├📁 images/          # Logo and static assets
+ ├📁 videos/          # Background / hero videos
+ ├📄 index.html       # Landing page
+ ├📄 thankyou.html    # Form submission confirmation page
+ ├📄 style.css        # All styling
+ ├📄 app.js           # Animation & interaction system
+ └📄 serve.js         # Simple static file server
 ```
 
-## ⚙️ Installation & Running Locally
+## Running Locally
+
+No build step is required — this is a static site.
 
 ```bash
-# Clone the repo
-git clone https://github.com/Ayush-Goel20/Animated-Portfolio.git
+# Serve the site (Node.js)
+node serve.js
 
-# Navigate into the folder
-cd Animated-Portfolio
-
-# Install dependencies
-npm install
-
-# Start the development server
-npm run dev
+# Then open
+http://localhost:5501
 ```
 
-## 📦 Deployment
-
-Deployed using [Vercel](https://vercel.com) — push to your main branch and Vercel auto-deploys.
-
-## 🖼️ Screenshots
-
-### 💻 Desktop View
-
-![Desktop Screenshot](./images/homepage.png)
-
-### 📱 Mobile View
-<img src="./images/mobile.jpg" alt="Mobile Screenshot" height="400"/>
-
-
-## 🙌 Acknowledgements
-
-Thanks to open-source tools and inspirations from modern developer portfolios.
-
-## 📧 Contact
-
-If you'd like to connect:
-
-- 📧 [ayushgoel544@gmail.com](mailto\:ayushgoel544@gmail.com)
-- 💼 [LinkedIn](https://www.linkedin.com/in/ayush-goel-5b54a018a)
-
----
-
-⭐️ If you like this project, feel free to **star** it and follow for more updates!
-
-
+Alternatively, open `index.html` directly in a browser.
