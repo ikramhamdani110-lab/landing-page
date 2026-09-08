@@ -1,8 +1,5 @@
-/* TALORA — animation & interaction system */
-
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-/* ---------- Sidebar ---------- */
 const sideBar = document.querySelector('.sidebar');
 const menu = document.querySelector('.menu-icon');
 const closeIcon = document.querySelector('.close-icon');
@@ -17,7 +14,6 @@ closeIcon.addEventListener("click", function() {
     document.body.style.overflow = 'auto';
 });
 
-// Close sidebar when clicking on a link
 const navLinks = document.querySelectorAll('.mobile-nav a');
 navLinks.forEach(link => {
     link.addEventListener('click', () => {
@@ -26,7 +22,6 @@ navLinks.forEach(link => {
     });
 });
 
-// Smooth scrolling + hero replay on Home
 function playHero() {
     if (reduceMotion) return;
     gsap.killTweensOf('.hero-info > *');
@@ -54,17 +49,39 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
                 behavior: reduceMotion ? 'auto' : 'smooth'
             });
             if (targetId === '#home') {
-                // give the scroll time to land, then replay the hero timeline
                 setTimeout(playHero, reduceMotion ? 0 : 800);
             }
         }
     });
 });
 
-/* ---------- Hero typewriter removed ---------- */
-// Typing animation removed per user request
+/* Scroll spy: highlight nav link (blue underline) for the section in view */
+(function initScrollSpy() {
+    const navLinks = document.querySelectorAll('.desktop-nav li a[href^="#"], .mobile-nav li a[href^="#"]');
+    if (!navLinks.length) return;
 
-/* ---------- Studio timeline reveals (GSAP ScrollTrigger) ---------- */
+    const sections = [...navLinks]
+        .map(a => document.querySelector(a.getAttribute('href')))
+        .filter(Boolean);
+
+    function setActive(id) {
+        navLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === id));
+    }
+
+    function update() {
+        const probe = window.scrollY + window.innerHeight * 0.35;
+        let current = sections[0];
+        for (const s of sections) {
+            if (s.offsetTop <= probe) current = s;
+        }
+        setActive(current ? '#' + current.id : '');
+    }
+
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    update();
+})();
+
 if (window.gsap && window.ScrollTrigger) {
     gsap.registerPlugin(ScrollTrigger);
 
@@ -84,7 +101,6 @@ if (window.gsap && window.ScrollTrigger) {
     }
 }
 
-/* ---------- Build With TALORA — orbital cards ---------- */
 const caps = document.querySelectorAll('#orbitalCards .cap-card');
 const capCount = caps.length;
 let activeCap = 0;
@@ -93,16 +109,14 @@ let orbitAnimating = false;
 
 function layoutOrbit(animate = true) {
     caps.forEach((card, i) => {
-        const offset = ((i - activeCap) % capCount + capCount) % capCount; // 0 = front, 1..3 behind
+        const offset = ((i - activeCap) % capCount + capCount) % capCount;
         const angles = [0, 155, 180, 205];
         const angle = angles[offset] * (Math.PI / 180);
         const vw = window.innerWidth;
-        // Cards positioned ON the orbital path - match the ring dimensions (1200x580)
         const radiusX = offset === 0 ? 0 : (vw < 640 ? 150 : vw < 900 ? 250 : vw < 1200 ? 380 : 500);
         const radiusY = offset === 0 ? 0 : (vw < 640 ? 75 : vw < 900 ? 125 : vw < 1200 ? 185 : 250);
         const x = Math.sin(angle) * radiusX;
         const y = -Math.cos(angle) * radiusY;
-        // Use opacity instead of blur for better performance on background cards
         const cfg = offset === 0
             ? { scale: 1, opacity: 1, filter: 'blur(0px)', zIndex: 10 }
             : { scale: 0.78, opacity: 0.25, filter: 'blur(0px)', zIndex: 5 - offset };
@@ -125,7 +139,6 @@ function restartOrbitTimer() {
     if (!reduceMotion) orbitTimer = setTimeout(() => setActiveCap(activeCap + 1), 4500);
 }
 
-// Swipe support for Build section
 let touchStartX = 0;
 let touchEndX = 0;
 const orbitalStage = document.querySelector('.orbital-stage');
@@ -140,7 +153,6 @@ if (orbitalStage) {
         handleSwipe();
     }, { passive: true });
 
-    // Trackpad/mouse swipe support
     let mouseDown = false;
     let mouseStartX = 0;
 
@@ -171,10 +183,8 @@ function handleSwipe() {
 
     if (Math.abs(deltaX) > swipeThreshold) {
         if (deltaX > 0) {
-            // Swipe right - previous
             setActiveCap(activeCap - 1);
         } else {
-            // Swipe left - next
             setActiveCap(activeCap + 1);
         }
     }
@@ -183,14 +193,12 @@ function handleSwipe() {
 layoutOrbit(false);
 restartOrbitTimer();
 
-// Debounced resize handler for better performance
 let resizeTimeout;
 window.addEventListener('resize', () => {
     clearTimeout(resizeTimeout);
     resizeTimeout = setTimeout(() => layoutOrbit(false), 150);
 });
 
-/* ---------- Join TALORA — simple auto-rotating card ---------- */
 const joinStates = [
     { title: 'Meaningful Projects', text: 'Work on real client projects matched to what you do best, in close collaboration.' },
     { title: 'Grow & Earn', text: 'Build experience with every project and get paid for the work you complete.' }
@@ -218,7 +226,6 @@ function gotoJoinState(i) {
     if (!changed) return;
     if (reduceMotion) { setJoinContent(next); return; }
 
-    // one physical card slides DOWN out of view, content swaps, card returns from above
     joinAnimating = true;
     gsap.to(joinCard, {
         y: 120, opacity: 0, duration: 0.55, ease: 'power2.in',
@@ -244,7 +251,6 @@ joinCard.addEventListener('mouseleave', () => { joinHover = false; restartJoinTi
 setJoinContent(0);
 restartJoinTimer();
 
-/* ---------- Contact audience selector ---------- */
 const audienceBtns = document.querySelectorAll('.audience-btn');
 const audienceInput = document.getElementById('audienceInput');
 
@@ -256,7 +262,6 @@ audienceBtns.forEach(btn => {
     });
 });
 
-/* ---------- Mobile adjustments ---------- */
 function isMobileDevice() {
     return (typeof window.orientation !== 'undefined') || navigator.userAgent.indexOf('IEMobile') !== -1;
 }
@@ -268,5 +273,4 @@ if (isMobileDevice()) {
     });
 }
 
-/* ---------- Play hero on load ---------- */
 window.addEventListener('load', playHero);

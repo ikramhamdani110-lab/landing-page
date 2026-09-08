@@ -1,5 +1,8 @@
 {
-  "dependencies": {
-    "playwright": "^1.63.0"
+  "name": "talora-landing-page",
+  "version": "1.0.0",
+  "description": "TALORA — Premium Digital Ecosystem company landing page",
+  "scripts": {
+    "start": "node serve.js"
   }
 }
