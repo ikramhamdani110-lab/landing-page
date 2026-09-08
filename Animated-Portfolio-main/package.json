@@ -1,8 +1,16 @@
 {
-  "name": "talora-landing-page",
-  "version": "1.0.0",
-  "description": "TALORA — Premium Digital Ecosystem company landing page",
-  "scripts": {
-    "start": "node serve.js"
-  }
+    "name":  "talora-landing-page",
+    "version":  "1.0.0",
+    "description":  "TALORA — Premium Digital Ecosystem company landing page",
+    "scripts":  {
+                    "start":  "node serve.js",
+                    "dev":  "vercel dev",
+                    "deploy":  "vercel deploy --prod",
+                    "checkdb":  "node check-db.js"
+                },
+    "dependencies":  {
+                         "better-sqlite3":  "^13.0.3",
+                         "dotenv":  "^17.4.2",
+                         "pg":  "^8.23.0"
+                     }
 }

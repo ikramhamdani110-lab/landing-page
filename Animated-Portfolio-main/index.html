@@ -239,7 +239,7 @@
                         </button>
                     </div>
 
-                    <form action="https://formsubmit.co/ikramhamdani110@gmail.com" method="POST" class="contact-form" id="contact-form">
+                    <form class="contact-form" id="contact-form" novalidate>
                         <div class="form-grid">
                             <div class="form-col">
                                 <div class="form-group">
@@ -251,6 +251,11 @@
                                     <label for="email">Email Address</label>
                                     <input type="email" id="email" name="email" placeholder="Your Email" required>
                                 </div>
+
+                                <div class="form-group">
+                                    <label for="subject">Subject</label>
+                                    <input type="text" id="subject" name="subject" placeholder="What is it about?" required>
+                                </div>
                             </div>
 
                             <div class="form-group">
@@ -259,9 +264,7 @@
                             </div>
                         </div>
 
-                        <input type="hidden" name="_captcha" value="false">
-                        <input type="hidden" name="_next" value="thankyou.html">
-                        <input type="hidden" name="audience" id="audienceInput" value="project">
+                        <input type="hidden" name="audience" id="audienceInput" value="project" aria-label="Subject">
 
                         <button type="submit">Send Message <i class='bx bx-mail-send'></i></button>
                     </form>
@@ -286,14 +289,24 @@
                         </div>
                     </a>
 
-                    <a href="mailto:ikramhamdani110@gmail.com" class="social-card email-card" aria-label="Email">
-                        <div class="social-card-icon"><i class='bx bx-envelope'></i></div>
+                    <a href="tel:+212600000000" class="social-card phone-card" aria-label="Phone">
+                        <div class="social-card-icon"><i class='bx bx-phone'></i></div>
                         <div class="social-card-content">
-                            <h4>Email</h4>
-                            <p>ikramhamdani110@gmail.com</p>
+                            <h4>Phone</h4>
+                            <p>+212 600 000 000</p>
+                            <span class="social-card-desc">Call us directly for a quick response.</span>
                         </div>
                     </a>
                 </div>
+            </div>
+
+            <div class="talora-toast" id="taloraToast" role="status" aria-live="polite" hidden>
+                <div class="toast-icon" id="toastIcon"><i class='bx bx-check'></i></div>
+                <div class="toast-body">
+                    <h4 id="toastTitle">Message Sent Successfully</h4>
+                    <p id="toastText">Thank you for reaching out to TALORA. Your inquiry has been received.</p>
+                </div>
+                <button class="toast-close" id="toastClose" aria-label="Close"><i class='bx bx-x'></i></button>
             </div>
         </section>
 

@@ -262,6 +262,86 @@ audienceBtns.forEach(btn => {
     });
 });
 
+/* ---- Contact form submission (POST /api/contact) ---- */
+const contactForm = document.getElementById('contact-form');
+const submitBtn = contactForm.querySelector('button[type="submit"]');
+const toast = document.getElementById('taloraToast');
+const toastTitle = document.getElementById('toastTitle');
+const toastText = document.getElementById('toastText');
+const toastIcon = document.getElementById('toastIcon');
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+let isSubmitting = false;
+let toastTimer = null;
+
+function showToast(success, title, text) {
+    toastTitle.textContent = title;
+    toastText.textContent = text;
+    toast.classList.toggle('error', !success);
+    toastIcon.innerHTML = success ? "<i class='bx bx-check'></i>" : "<i class='bx bx-error'></i>";
+    toast.hidden = false;
+    requestAnimationFrame(() => toast.classList.add('visible'));
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, 6000);
+}
+
+function hideToast() {
+    toast.classList.remove('visible');
+    setTimeout(() => { toast.hidden = true; }, 350);
+}
+
+document.getElementById('toastClose').addEventListener('click', hideToast);
+
+contactForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (isSubmitting) return; // prevent duplicate submissions
+
+    const name = document.getElementById('name').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const message = document.getElementById('message').value.trim();
+    const subjectField = document.getElementById('subject');
+    const subject = (subjectField && subjectField.value.trim())
+        || (audienceInput.value === 'join' ? 'Join TALORA' : 'Start a Project');
+
+    if (!name || !email || !message || !subject) {
+        showToast(false, 'Please complete all required fields.', 'Fill in your name, email, and message before sending.');
+        return;
+    }
+    if (!EMAIL_RE.test(email)) {
+        showToast(false, 'Please enter a valid email address.', 'The email you entered does not look right. Please check it and try again.');
+        return;
+    }
+
+    isSubmitting = true;
+    const originalHtml = submitBtn.innerHTML;
+    submitBtn.classList.add('sending');
+    submitBtn.innerHTML = "Sending... <i class='bx bx-loader-alt bx-spin'></i>";
+    hideToast();
+
+    try {
+        const res = await fetch('/api/contact', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email, subject, message })
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (res.ok && data.success) {
+            contactForm.reset();
+            showToast(true, 'Message Sent Successfully', 'Thank you for reaching out to TALORA. Your inquiry has been received.');
+        } else if (res.status === 400) {
+            showToast(false, data.message || 'Please complete all required fields.', 'Please check your details and try again.');
+        } else {
+            showToast(false, 'Unable to send your message.', 'Something went wrong on our side. Please try again in a moment.');
+        }
+    } catch {
+        showToast(false, 'Unable to send your message.', 'A network error occurred. Please check your connection and try again.');
+    } finally {
+        isSubmitting = false;
+        submitBtn.classList.remove('sending');
+        submitBtn.innerHTML = originalHtml;
+    }
+});
+
 function isMobileDevice() {
     return (typeof window.orientation !== 'undefined') || navigator.userAgent.indexOf('IEMobile') !== -1;
 }

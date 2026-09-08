@@ -1,0 +1,8 @@
+.vercel
+node_modules
+talora.db
+talora.db-shm
+talora.db-wal
+
+.vercel
+.env*
