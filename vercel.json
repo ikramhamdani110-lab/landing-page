@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "outputDirectory": "Animated-Portfolio-main",
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/((?!api/).*)", "destination": "/Animated-Portfolio-main/$1" }
+  ]
+}
