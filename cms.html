@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>TALORA — Internal Content Management</title>
+    <link rel="stylesheet" href="cms.css">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+</head>
+<body>
+    <!-- ============ Sign-in gate ============ -->
+    <div class="login-view" id="loginView">
+        <form class="login-card" id="loginForm" autocomplete="off">
+            <div class="login-logo">TALORA</div>
+            <p class="login-sub">Internal Content Management</p>
+            <label class="field">
+                <span>Username</span>
+                <input type="text" id="loginUsername" required autocomplete="username">
+            </label>
+            <label class="field">
+                <span>Password</span>
+                <input type="password" id="loginPassword" required autocomplete="current-password">
+            </label>
+            <button type="submit" class="btn btn-primary btn-block" id="loginBtn">Sign In</button>
+            <div class="form-message" id="loginMessage" role="alert"></div>
+        </form>
+    </div>
+
+    <!-- ============ CMS dashboard ============ -->
+    <div class="cms-view hidden" id="cmsView">
+        <header class="cms-header">
+            <div class="cms-brand">
+                <span class="cms-logo">TALORA</span>
+                <span class="cms-divider">/</span>
+                <span class="cms-title">Content Management</span>
+            </div>
+            <div class="cms-user">
+                <span class="cms-user-badge"><i class='bx bx-shield-quarter'></i> <span id="adminName">admin</span></span>
+                <button class="btn btn-ghost" id="logoutBtn"><i class='bx bx-log-out'></i> Sign out</button>
+            </div>
+        </header>
+
+        <main class="cms-main">
+            <!-- ============ Website Content (per-section editing) ============ -->
+            <div class="cms-toolbar">
+                <div class="toolbar-left">
+                    <h2>Website Content</h2>
+                    <span class="count-pill" id="siteCountPill">8</span>
+                </div>
+                <p class="toolbar-hint">Edit any text, link or media on the public website. Changes go live once saved.</p>
+            </div>
+            <div class="site-grid" id="siteGrid"></div>
+
+            <!-- ============ Content Items (existing CRUD) ============ -->
+            <div class="cms-toolbar" style="margin-top:2.5rem">
+                <div class="toolbar-left">
+                    <h2>Content Items</h2>
+                    <span class="count-pill" id="countPill">0</span>
+                </div>
+                <button class="btn btn-primary" id="addBtn"><i class='bx bx-plus'></i> Add Content</button>
+            </div>
+
+            <div class="cms-filters">
+                <div class="search-box">
+                    <i class='bx bx-search'></i>
+                    <input type="search" id="searchInput" placeholder="Search content...">
+                </div>
+                <select id="sectionFilter" aria-label="Filter by section">
+                    <option value="">All sections</option>
+                    <option>Hero</option><option>Studio Ecosystem</option><option>Talent</option><option>Project</option>
+                    <option>Match</option><option>Build</option><option>Deliver</option><option>Earn</option><option>Grow</option>
+                    <option>Build With TALORA</option><option>Design</option><option>Engineering</option>
+                    <option>Creative Technology</option><option>Strategy</option><option>Join TALORA</option>
+                    <option>Grow &amp; Earn</option><option>Contact</option><option>Updates</option><option>General</option>
+                </select>
+                <select id="categoryFilter" aria-label="Filter by category">
+                    <option value="">All categories</option>
+                    <option>Update</option><option>Project</option><option>Certification</option>
+                    <option>Skill</option><option>Achievement</option><option>Experience</option><option>General</option>
+                </select>
+                <select id="statusFilter" aria-label="Filter by status">
+                    <option value="">All statuses</option>
+                    <option value="published">Published</option>
+                    <option value="draft">Draft</option>
+                </select>
+            </div>
+
+            <div class="alert hidden" id="alertBox" role="alert"></div>
+
+            <div class="table-state" id="loadingState">
+                <span class="spinner"></span> Loading content...
+            </div>
+            <div class="table-state hidden" id="errorState">
+                <i class='bx bx-error'></i> <span id="errorText">Something went wrong.</span>
+                <button class="btn btn-ghost" id="retryBtn">Retry</button>
+            </div>
+            <div class="table-state hidden" id="emptyState">
+                <i class='bx bx-folder-open'></i> No content yet. Click <strong>Add Content</strong> to create your first item.
+            </div>
+
+            <div class="table-wrap" id="tableWrap">
+                <table class="content-table">
+                    <thead>
+                        <tr>
+                            <th>Content</th>
+                            <th>Section</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Updated</th>
+                            <th class="th-actions">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+                <!-- Mobile stacked cards -->
+                <div class="content-cards" id="contentCards"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ============ Website Content section editor ============ -->
+    <div class="modal-overlay hidden" id="siteModalOverlay">
+        <div class="modal modal-lg" role="dialog" aria-modal="true" aria-labelledby="siteModalTitle">
+            <div class="modal-head">
+                <h3 id="siteModalTitle">Edit Section</h3>
+                <button class="icon-btn" id="siteModalClose" aria-label="Close"><i class='bx bx-x'></i></button>
+            </div>
+            <p class="modal-hint">Leave a field empty to reset it to the website default.</p>
+            <form id="siteForm" novalidate>
+                <div id="siteFields"></div>
+                <div class="form-message" id="siteFormMessage" role="alert"></div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-ghost" id="siteCancelBtn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="siteSaveBtn">Save & Publish</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============ Add / Edit modal ============ -->
+    <div class="modal-overlay hidden" id="modalOverlay">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+            <div class="modal-head">
+                <h3 id="modalTitle">Add Content</h3>
+                <button class="icon-btn" id="modalClose" aria-label="Close"><i class='bx bx-x'></i></button>
+            </div>
+            <form id="contentForm" novalidate>
+                <label class="field">
+                    <span>Title <em>*</em></span>
+                    <input type="text" id="fTitle" maxlength="200" placeholder="e.g. New partnership announcement">
+                    <small class="field-error" id="eTitle"></small>
+                </label>
+                <label class="field">
+                    <span>Content / Description <em>*</em></span>
+                    <textarea id="fDescription" rows="5" placeholder="Describe this content item..."></textarea>
+                    <small class="field-error" id="eDescription"></small>
+                </label>
+                <label class="field">
+                    <span>Section <em>*</em></span>
+                    <select id="fSection">
+                        <option value="">Select section...</option>
+                        <option>Hero</option><option>Studio Ecosystem</option><option>Talent</option><option>Project</option>
+                        <option>Match</option><option>Build</option><option>Deliver</option><option>Earn</option><option>Grow</option>
+                        <option>Build With TALORA</option><option>Design</option><option>Engineering</option>
+                        <option>Creative Technology</option><option>Strategy</option><option>Join TALORA</option>
+                        <option>Grow &amp; Earn</option><option>Contact</option><option>Updates</option><option>General</option>
+                    </select>
+                    <small class="field-error" id="eSection"></small>
+                </label>
+                <div class="field-row">
+                    <label class="field">
+                        <span>Category <em>*</em></span>
+                        <select id="fCategory">
+                            <option value="">Select category...</option>
+                            <option>Update</option><option>Project</option><option>Certification</option>
+                            <option>Skill</option><option>Achievement</option><option>Experience</option><option>General</option>
+                        </select>
+                        <small class="field-error" id="eCategory"></small>
+                    </label>
+                    <label class="field">
+                        <span>Status <em>*</em></span>
+                        <select id="fStatus">
+                            <option value="draft">Draft</option>
+                            <option value="published">Published</option>
+                        </select>
+                        <small class="field-error" id="eStatus"></small>
+                    </label>
+                </div>
+                <div class="form-message" id="formMessage" role="alert"></div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-ghost" id="cancelBtn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveBtn">Save Content</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============ Delete confirmation ============ -->
+    <div class="modal-overlay hidden" id="deleteOverlay">
+        <div class="modal modal-sm" role="alertdialog" aria-modal="true">
+            <div class="modal-head">
+                <h3>Delete Content</h3>
+                <button class="icon-btn" id="deleteClose" aria-label="Close"><i class='bx bx-x'></i></button>
+            </div>
+            <p class="delete-text">Are you sure you want to delete this content?</p>
+            <p class="delete-title" id="deleteTitle"></p>
+            <div class="form-message" id="deleteMessage" role="alert"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-ghost" id="deleteCancel">Cancel</button>
+                <button type="button" class="btn btn-danger" id="deleteConfirm">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="cms.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+.vercel
+node_modules
+talora.db
+talora.db-shm
+talora.db-wal
+
+.vercel
+.env*
+
+# Logs
+server-err.log
+server-out.log
+neon-install.log

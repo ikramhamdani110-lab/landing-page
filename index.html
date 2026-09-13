@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TALORA — Premium Digital Ecosystem</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+</head>
+<body>
+    <div class="container">
+        <div class="bg-atmosphere" aria-hidden="true">
+        <div class="bg-glow bg-glow-top"></div>
+        <div class="bg-glow bg-glow-left"></div>
+        <div class="bg-glow bg-glow-right"></div>
+    </div>
+
+        <header data-aos="fade-down" data-aos-duration="2000">
+            <a href="#home" class="left talora-logo" aria-label="TALORA — Home">
+                <img src="images/talora-logo.png" alt="TALORA" class="logo-img" />
+            </a>
+
+            <ul class="desktop-nav">
+                <li><a href="#home" data-tc="nav_home">Home</a></li>
+                <li><a href="#studio" data-tc="nav_studio">Studio</a></li>
+                <li><a href="#build" data-tc="nav_build">Build With <span class="gradient">TALORA</span></a></li>
+                <li><a href="#join" data-tc="nav_join">Join <span class="gradient">TALORA</span></a></li>
+                <li><a href="#contact" data-tc="nav_contact">Contact</a></li>
+            </ul>
+
+            <div class="desktop-icons">
+                <a href="https://github.com/ikramhamdani110-lab/" data-tc-link="github" aria-label="GitHub"><i class='bx bxl-github'></i></a>
+                <a href="https://www.linkedin.com/in/hamdani-ikram-86a0953b0/" data-tc-link="linkedin" aria-label="LinkedIn"><i class='bx bxl-linkedin-square'></i></a>
+            </div>
+
+            <div class="menu-icon">
+                <i class='bx bx-menu'></i>
+            </div>
+        </header>
+
+        <div class="sidebar">
+            <div class="close-icon">
+                <i class='bx bx-x'></i>
+            </div>
+
+            <ul class="mobile-nav">
+                <li><a href="#home" data-tc="nav_home">Home</a></li>
+                <li><a href="#studio" data-tc="nav_studio">Studio</a></li>
+                <li><a href="#build" data-tc="nav_build">Build With <span class="gradient">TALORA</span></a></li>
+                <li><a href="#join" data-tc="nav_join">Join <span class="gradient">TALORA</span></a></li>
+                <li><a href="#contact" data-tc="nav_contact">Contact</a></li>
+            </ul>
+
+            <div class="social-sidebar">
+                <a href="https://github.com/ikramhamdani110-lab/" data-tc-link="github" aria-label="GitHub"><i class='bx bxl-github'></i></a>
+                <a href="https://www.linkedin.com/in/hamdani-ikram-86a0953b0/" data-tc-link="linkedin" aria-label="LinkedIn"><i class='bx bxl-linkedin-square'></i></a>
+            </div>
+        </div>
+
+
+        <section class="hero" id="home">
+            <div class="hero-info" >
+                <div class="hero-info-title hero-badge">
+                    <i class='bx bxs-collection'></i>
+                    <span data-tc="hero_badge">Creative Technology Studio</span>
+                </div>
+
+                <h1 class="hero-headline" data-tc="hero_title"><span class="gradient">TALORA</span> is the area for your talent to grow</h1>
+
+                <p class="hero-description" data-tc="hero_desc"><span class="gradient">TALORA</span> collects valuable skills across design, engineering, creative technology and strategy, then connects that talent with projects where those skills can create real value.</p>
+            </div>
+
+            <div class="skills-video-box">
+                <video class="skills-video autoBlur" autoplay loop muted plays-inline src="videos/hero-video.mp4"></video>
+            </div>
+
+            <div class="scroll-down"></div>
+        </section>
+
+        <section class="studio-section" id="studio">
+            <h1 class="section-title autoDisplay" data-tc="eco_title">The Studio <span class="accent-color">Ecosystem</span></h1>
+            <p class="section-sub" data-tc="eco_sub">A premium ecosystem connecting clients with skilled people.</p>
+
+            <div class="timeline">
+                <div class="timeline-line"></div>
+
+                <div class="timeline-item left">
+                    <div class="timeline-content">
+                        <h3 data-tc="talent_title">Talent</h3>
+                        <p data-tc="talent_desc"><span class="gradient">TALORA</span> brings together people with valuable skills across technology, design, creativity and strategy.</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item right">
+                    <div class="timeline-content">
+                        <h3 data-tc="project_title">Project</h3>
+                        <p data-tc="project_desc">A client brings a project to <span class="gradient">TALORA</span> and explains what they need, what they want to achieve and what the project requires.</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item left">
+                    <div class="timeline-content">
+                        <h3 data-tc="match_title">Match</h3>
+                        <p data-tc="match_desc"><span class="gradient">TALORA</span> identifies the person or team whose skills are the strongest fit for that project.</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item right">
+                    <div class="timeline-content">
+                        <h3 data-tc="build_title">Build</h3>
+                        <p data-tc="build_desc">The selected talent works on the project, turning the client's needs into the actual product or experience.</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item left">
+                    <div class="timeline-content">
+                        <h3 data-tc="deliver_title">Deliver</h3>
+                        <p data-tc="deliver_desc">The finished work is delivered to the client through <span class="gradient">TALORA</span>.</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item right">
+                    <div class="timeline-content">
+                        <h3 data-tc="earn_title">Earn</h3>
+                        <p data-tc="earn_desc">The client pays <span class="gradient">TALORA</span>. <span class="gradient">TALORA</span> keeps the agreed share, and the remaining amount goes to the person or team who completed the work.</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item left">
+                    <div class="timeline-content">
+                        <h3 data-tc="grow_title">Grow</h3>
+                        <p data-tc="grow_desc">Talent gains experience and new opportunities, clients can return with new ideas, and <span class="gradient">TALORA</span> continues connecting the right people with the right projects.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="marquee" aria-hidden="true">
+                <div class="marquee-track">
+                    <span>Design</span><span class="dot">•</span><span>Craft</span><span class="dot">•</span><span>Engineering</span><span class="dot">•</span><span>Strategy</span><span class="dot">•</span><span>Technology</span><span class="dot">•</span><span>Motion</span><span class="dot">•</span><span>Experience</span><span class="dot">•</span><span>Development</span><span class="dot">•</span>
+                    <span>Design</span><span class="dot">•</span><span>Craft</span><span class="dot">•</span><span>Engineering</span><span class="dot">•</span><span>Strategy</span><span class="dot">•</span><span>Technology</span><span class="dot">•</span><span>Motion</span><span class="dot">•</span><span>Experience</span><span class="dot">•</span><span>Development</span><span class="dot">•</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="build-section" id="build">
+            <h1 class="section-title autoDisplay" data-tc="bwith_title">Build <span class="accent-color">With <span class="gradient">TALORA</span></span></h1>
+            <p class="section-sub" data-tc="bwith_sub">Capabilities that live across the <span class="gradient">TALORA</span> ecosystem.</p>
+
+            <div class="orbital-stage">
+                <div class="orbital-ring" id="orbitalRing"></div>
+                <div class="orbital-cards" id="orbitalCards">
+
+                    <article class="cap-card" data-cap="design">
+                        <div class="cap-icon"><i class='bx bx-palette'></i></div>
+                        <h3 data-tc="cap_design_title">Design</h3>
+                        <ul data-tc-list="cap_design_list">
+                            <li>UI/UX Design</li>
+                            <li>Product Design</li>
+                            <li>Visual Design</li>
+                            <li>Interaction Design</li>
+                        </ul>
+                    </article>
+
+                    <article class="cap-card" data-cap="engineering">
+                        <div class="cap-icon"><i class='bx bx-code-block'></i></div>
+                        <h3 data-tc="cap_eng_title">Engineering</h3>
+                        <ul data-tc-list="cap_eng_list">
+                            <li>Front-End Development</li>
+                            <li>Back-End Development</li>
+                            <li>Full-Stack Development</li>
+                            <li>Software Engineering</li>
+                        </ul>
+                    </article>
+
+                    <article class="cap-card" data-cap="creative">
+                        <div class="cap-icon"><i class='bx bx-meteor'></i></div>
+                        <h3 data-tc="cap_creative_title">Creative Technology</h3>
+                        <ul data-tc-list="cap_creative_list">
+                            <li>Creative Development</li>
+                            <li>Motion Design</li>
+                            <li>Interactive Experiences</li>
+                            <li>Digital Experiences</li>
+                        </ul>
+                    </article>
+
+                    <article class="cap-card" data-cap="strategy">
+                        <div class="cap-icon"><i class='bx bx-compass'></i></div>
+                        <h3 data-tc="cap_strategy_title">Strategy</h3>
+                        <ul data-tc-list="cap_strategy_list">
+                            <li>Digital Strategy</li>
+                            <li>Product Thinking</li>
+                            <li>Experience Strategy</li>
+                        </ul>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="join-section" id="join">
+            <h1 class="section-title autoDisplay" data-tc="join_title">Join <span class="accent-color"><span class="gradient">TALORA</span></span></h1>
+            <p class="section-sub" data-tc="join_sub">Bring your skills into an ecosystem built around meaningful work.</p>
+
+            <div class="join-stage">
+                <div class="join-dots">
+                    <button class="join-dot active" data-state="0" aria-label="Meaningful Projects"></button>
+                    <button class="join-dot" data-state="1" aria-label="Grow & Earn"></button>
+                </div>
+
+                <div class="join-card" id="joinCard">
+                    <div class="join-card-inner">
+                        <span class="join-eyebrow" data-tc="join_eyebrow">Join <span class="gradient">TALORA</span></span>
+                        <h3 id="joinTitle">Meaningful Projects</h3>
+                        <p id="joinText">Work on real client projects matched to what you do best, in close collaboration.</p>
+                        <a href="#contact" data-tc-link="join-cta" class="contact-button"><button><i class='bx bx-arrow-to-right'></i> <span data-tc="join_cta_text">Join <span class="gradient">TALORA</span> →</span></button></a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="contact-section" id="contact">
+            <h1 class="section-title autoDisplay" data-tc="contact_title">Let's <span class="gradient">Build</span> Together</h1>
+            <p class="section-sub" data-tc="contact_sub">Connect with <span class="gradient">TALORA</span> — whether you have a project or skills to bring.</p>
+
+            <div class="contact-container">
+                <div class="contact-main autoBlur">
+                    <h3 class="contact-question" data-tc="contact_question">What brings you to <span class="gradient">TALORA</span>?</h3>
+
+                    <div class="contact-audience-selector">
+                        <button class="audience-btn active" data-audience="project">
+                            <i class='bx bx-briefcase-alt-2'></i>
+                            <span data-tc="audience_project">Start a Project</span>
+                        </button>
+                        <button class="audience-btn" data-audience="join">
+                            <i class='bx bx-user-voice'></i>
+                            <span data-tc="audience_join">Join <span class="gradient">TALORA</span></span>
+                        </button>
+                    </div>
+
+                    <form class="contact-form" id="contact-form" novalidate>
+                        <div class="form-grid">
+                            <div class="form-col">
+                                <div class="form-group">
+                                    <label for="name" data-tc="label_name">Full Name</label>
+                                    <input type="text" id="name" name="name" placeholder="Your Full Name" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="email" data-tc="label_email">Email Address</label>
+                                    <input type="email" id="email" name="email" placeholder="Your Email" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="subject" data-tc="label_subject">Subject</label>
+                                    <input type="text" id="subject" name="subject" placeholder="What is it about?" required>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="message" data-tc="label_message">Your Message</label>
+                                <textarea id="message" name="message" placeholder="Share your thoughts..." required></textarea>
+                            </div>
+                        </div>
+
+                        <input type="hidden" name="audience" id="audienceInput" value="project" aria-label="Subject">
+
+                        <button type="submit"><span data-tc="send_btn">Send Message</span> <i class='bx bx-mail-send'></i></button>
+                    </form>
+                </div>
+
+                <div class="contact-social-cards autoBlur">
+                    <a href="https://github.com/ikramhamdani110-lab/" data-tc-link="github" class="social-card github-card" aria-label="GitHub">
+                        <div class="social-card-icon"><i class='bx bxl-github'></i></div>
+                        <div class="social-card-content">
+                            <h4 data-tc="social_github_title">GitHub</h4>
+                            <p data-tc="social_github_sub">Explore Our Work</p>
+                            <span class="social-card-desc" data-tc="social_github_desc">Discover projects and work created by <span class="gradient">TALORA</span>'s talent.</span>
+                        </div>
+                    </a>
+
+                    <a href="https://www.linkedin.com/in/hamdani-ikram-86a0953b0/" data-tc-link="linkedin" class="social-card linkedin-card" aria-label="LinkedIn">
+                        <div class="social-card-icon"><i class='bx bxl-linkedin-square'></i></div>
+                        <div class="social-card-content">
+                            <h4 data-tc="social_linkedin_title">LinkedIn</h4>
+                            <p data-tc="social_linkedin_sub">Follow Our Journey</p>
+                            <span class="social-card-desc" data-tc="social_linkedin_desc">Stay updated on <span class="gradient">TALORA</span>'s growth and company updates.</span>
+                        </div>
+                    </a>
+
+                    <a href="mailto:ikramhamdani110@gmail.com" data-tc-link="email" class="social-card phone-card" aria-label="Email">
+                        <div class="social-card-icon"><i class='bx bx-envelope'></i></div>
+                        <div class="social-card-content">
+                            <h4 data-tc="social_email_title">Email</h4>
+                            <p data-tc="social_email_sub">ikramhamdani110@gmail.com</p>
+                            <span class="social-card-desc" data-tc="social_email_desc">Write to us and we'll respond quickly.</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <div class="talora-toast" id="taloraToast" role="status" aria-live="polite" hidden>
+                <div class="toast-icon" id="toastIcon"><i class='bx bx-check'></i></div>
+                <div class="toast-body">
+                    <h4 id="toastTitle">Message Sent Successfully</h4>
+                    <p id="toastText">Thank you for reaching out to TALORA. Your inquiry has been received.</p>
+                </div>
+                <button class="toast-close" id="toastClose" aria-label="Close"><i class='bx bx-x'></i></button>
+            </div>
+        </section>
+
+        <footer class="footer-simple">
+            <p data-tc="footer_text">© 2025 <span class="gradient">TALORA</span>. A premium ecosystem connecting clients with skilled people.</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+    <script src="site-content.js"></script>
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+    <script>
+        AOS.init({
+            duration: 1000,
+            once: true
+        });
+    </script>
+</body>
+</html>
