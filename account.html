@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Account — TALORA</title>
+    <link rel="stylesheet" href="auth.css">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+</head>
+<body>
+    <header class="auth-topbar">
+        <a class="auth-logo" href="index.html">TALORA</a>
+        <a class="auth-back" href="index.html"><i class='bx bx-arrow-back'></i> Back to site</a>
+    </header>
+
+    <div class="auth-view">
+        <!-- Protected: only shown when authenticated -->
+        <div class="auth-card account-card hidden" id="accountCard">
+            <h1>My Account</h1>
+            <p class="auth-sub">Your TALORA profile</p>
+            <div class="account-rows">
+                <div class="account-row"><span class="k">Name</span><span class="v" id="accName">—</span></div>
+                <div class="account-row"><span class="k">Email</span><span class="v" id="accEmail">—</span></div>
+                <div class="account-row"><span class="k">Role</span><span class="v"><span class="account-badge" id="accRole">user</span></span></div>
+                <div class="account-row"><span class="k">Member since</span><span class="v" id="accSince">—</span></div>
+            </div>
+            <div class="account-actions">
+                <button class="btn btn-ghost" id="logoutBtn"><i class='bx bx-log-out'></i> Log Out</button>
+            </div>
+        </div>
+
+        <!-- Shown when not authenticated -->
+        <div class="auth-card hidden" id="guestCard">
+            <h1>Not signed in</h1>
+            <p class="auth-sub">Please log in to view your TALORA account.</p>
+            <div class="account-actions" style="display:flex; gap:0.6rem;">
+                <a class="btn btn-primary" href="login.html">Log In</a>
+                <a class="btn btn-ghost" href="register.html">Register</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const TOKEN_KEY = 'talora_user_token';
+        const accountCard = document.getElementById('accountCard');
+        const guestCard = document.getElementById('guestCard');
+
+        function getToken() { try { return sessionStorage.getItem(TOKEN_KEY); } catch (_) { return null; } }
+        function clearToken() { try { sessionStorage.removeItem(TOKEN_KEY); } catch (_) {} }
+        function formatDate(v) {
+            if (!v) return '—';
+            const d = new Date(v);
+            return isNaN(d) ? v : d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+        async function loadProfile() {
+            const token = getToken();
+            if (!token) { guestCard.classList.remove('hidden'); return; }
+            try {
+                const res = await fetch('/api/user/profile', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (res.status === 401 || res.status === 403) { clearToken(); guestCard.classList.remove('hidden'); return; }
+                if (!res.ok) throw new Error('failed');
+                const data = await res.json();
+                const u = data.user || data;
+                document.getElementById('accName').textContent = u.fullName || u.full_name || '—';
+                document.getElementById('accEmail').textContent = u.email || '—';
+                document.getElementById('accRole').textContent = u.role || 'user';
+                document.getElementById('accSince').textContent = formatDate(u.createdAt || u.created_at);
+                accountCard.classList.remove('hidden');
+            } catch {
+                guestCard.classList.remove('hidden');
+            }
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            const token = getToken();
+            try {
+                if (token) {
+                    await fetch('/api/auth/logout', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                }
+            } catch (_) { /* best-effort */ }
+            clearToken();
+            window.location.href = 'login.html';
+        });
+
+        loadProfile();
+    </script>
+</body>
+</html>

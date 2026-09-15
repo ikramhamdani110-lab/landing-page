@@ -1,0 +1,139 @@
+/* TALORA — User Auth pages (register / login / account)
+   Reuses the CMS/site design tokens from cms.css & style.css. */
+
+:root {
+    --primary-color: #72a1de;
+    --primary-color-light: #72a1de94;
+    --primary-color-lighter: #72a1de81;
+    --dark-bg: #05060f;
+    --card-bg: rgba(10, 14, 30, 0.55);
+    --border: rgba(114, 161, 222, 0.22);
+    --text-color: lightgray;
+    --text-secondary: gray;
+    --danger: #e5484d;
+    --success: #30a46c;
+    --transition: 0.25s ease;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Arial', sans-serif;
+    color: var(--text-color);
+    background: linear-gradient(180deg, #0a0d1f 0%, #05060f 45%, #030409 100%) fixed;
+    min-height: 100vh;
+    line-height: 1.6;
+}
+
+.hidden { display: none !important; }
+
+/* ---------- Buttons ---------- */
+.btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem;
+    font-family: inherit; font-size: 0.95rem; font-weight: 600;
+    padding: 0.55rem 1.1rem; border-radius: 50px; cursor: pointer;
+    border: 1px solid transparent; transition: var(--transition); letter-spacing: 0.02em;
+    text-decoration: none;
+}
+.btn-primary {
+    color: #fff; background: rgba(114, 161, 222, 0.16);
+    border-color: var(--primary-color-lighter);
+    box-shadow: 0 0 5px var(--primary-color-lighter);
+}
+.btn-primary:hover { box-shadow: 0 0 15px var(--primary-color-lighter); transform: translateY(-2px); }
+.btn-primary:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+.btn-ghost { color: var(--text-color); background: transparent; border-color: var(--border); }
+.btn-ghost:hover { color: #fff; border-color: var(--primary-color-light); }
+.btn-block { width: 100%; }
+
+/* ---------- Layout ---------- */
+.auth-view {
+    min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 1.5rem;
+}
+.auth-topbar {
+    position: absolute; top: 0; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.1rem 1.6rem;
+}
+.auth-logo {
+    font-size: 1.3rem; font-weight: 800; letter-spacing: 0.18em; color: #fff;
+    text-decoration: none;
+    background: linear-gradient(90deg, #4f7cff, #a855f7, #38bdf8);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.auth-back { font-size: 0.85rem; color: var(--text-secondary); text-decoration: none; transition: var(--transition); }
+.auth-back:hover { color: #fff; }
+
+.auth-card {
+    width: 100%; max-width: 420px; padding: 2.5rem 2.2rem;
+    background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px;
+    box-shadow: 0 0 25px rgba(114, 161, 222, 0.15);
+    animation: authFadeIn 0.4s ease;
+}
+@keyframes authFadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+.auth-card h1 {
+    font-size: 1.4rem; color: #fff; letter-spacing: 0.04em; text-align: center;
+}
+.auth-sub {
+    text-align: center; color: var(--text-secondary); font-size: 0.85rem;
+    margin: 0.3rem 0 1.8rem;
+}
+
+/* ---------- Fields ---------- */
+.field { display: block; margin-bottom: 1rem; }
+.field > span { display: block; font-size: 0.8rem; letter-spacing: 0.05em; color: var(--text-color); margin-bottom: 0.35rem; }
+.field input {
+    width: 100%; padding: 0.6rem 0.8rem; border-radius: 8px;
+    border: 1px solid rgba(128, 128, 128, 0.4);
+    background-color: rgba(255, 255, 255, 0.06);
+    color: var(--text-color); font-family: inherit; font-size: 0.95rem;
+    transition: var(--transition);
+}
+.field input:focus {
+    outline: none; border-color: var(--primary-color);
+    box-shadow: 0 0 10px var(--primary-color-light);
+}
+.field .field-error {
+    display: none; font-size: 0.75rem; color: var(--danger); margin-top: 0.3rem;
+}
+.field.invalid input { border-color: var(--danger); }
+.field.invalid .field-error { display: block; }
+
+.form-message {
+    display: none; margin-top: 1rem; padding: 0.6rem 0.9rem; border-radius: 8px;
+    font-size: 0.85rem; text-align: center;
+}
+.form-message.error { display: block; background: rgba(229, 72, 77, 0.12); border: 1px solid rgba(229, 72, 77, 0.4); color: #ff9a9d; }
+.form-message.success { display: block; background: rgba(48, 164, 108, 0.12); border: 1px solid rgba(48, 164, 108, 0.4); color: #6ee7a8; }
+
+.auth-switch {
+    margin-top: 1.4rem; text-align: center; font-size: 0.85rem; color: var(--text-secondary);
+}
+.auth-switch a { color: var(--primary-color); text-decoration: none; font-weight: 600; }
+.auth-switch a:hover { text-decoration: underline; }
+
+/* ---------- Account page ---------- */
+.account-card { max-width: 560px; }
+.account-rows { margin: 1.5rem 0; }
+.account-row {
+    display: flex; justify-content: space-between; gap: 1rem; align-items: baseline;
+    padding: 0.75rem 0; border-bottom: 1px solid rgba(114, 161, 222, 0.12);
+    font-size: 0.92rem;
+}
+.account-row:last-child { border-bottom: none; }
+.account-row .k { color: var(--text-secondary); letter-spacing: 0.04em; font-size: 0.8rem; text-transform: uppercase; }
+.account-row .v { color: #fff; text-align: right; word-break: break-all; }
+.account-badge {
+    display: inline-block; padding: 0.15rem 0.7rem; border-radius: 50px;
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    background: rgba(114, 161, 222, 0.14); border: 1px solid var(--primary-color-lighter); color: var(--primary-color);
+}
+.account-actions { margin-top: 1.5rem; display: flex; justify-content: center; }
+
+@media (max-width: 480px) {
+    .auth-card { padding: 1.8rem 1.4rem; }
+    .account-row { flex-direction: column; gap: 0.1rem; }
+    .account-row .v { text-align: left; }
+}

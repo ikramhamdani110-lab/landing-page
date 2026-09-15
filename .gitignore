@@ -11,3 +11,6 @@ talora.db-wal
 server-err.log
 server-out.log
 neon-install.log
+serve.log
+serve-err.log
+patch-revoke.mjs

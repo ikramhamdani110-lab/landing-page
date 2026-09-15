@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log In — TALORA</title>
+    <link rel="stylesheet" href="auth.css">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+</head>
+<body>
+    <header class="auth-topbar">
+        <a class="auth-logo" href="index.html">TALORA</a>
+        <a class="auth-back" href="index.html"><i class='bx bx-arrow-back'></i> Back to site</a>
+    </header>
+
+    <div class="auth-view">
+        <div class="auth-card">
+            <h1>Welcome back</h1>
+            <p class="auth-sub">Log in to your TALORA account</p>
+            <form id="loginForm" novalidate>
+                <label class="field" id="fEmail">
+                    <span>Email Address</span>
+                    <input type="email" id="loginEmail" autocomplete="email">
+                    <em class="field-error">Please enter a valid email address.</em>
+                </label>
+                <label class="field" id="fPass">
+                    <span>Password</span>
+                    <input type="password" id="loginPass" autocomplete="current-password">
+                    <em class="field-error">Password is required.</em>
+                </label>
+                <button type="submit" class="btn btn-primary btn-block" id="loginBtn">Log In</button>
+                <div class="form-message" id="loginMessage" role="alert"></div>
+            </form>
+            <p class="auth-switch">Don't have an account? <a href="register.html">Create account</a></p>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('loginForm');
+        const msg = document.getElementById('loginMessage');
+        const btn = document.getElementById('loginBtn');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            msg.className = 'form-message';
+            const email = document.getElementById('loginEmail').value.trim();
+            const pass = document.getElementById('loginPass').value;
+
+            const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+            document.getElementById('fEmail').classList.toggle('invalid', !emailOk);
+            document.getElementById('fPass').classList.toggle('invalid', !pass);
+            if (!emailOk || !pass) return;
+
+            btn.disabled = true; btn.textContent = 'Logging in...';
+            try {
+                const res = await fetch('/api/auth/user-login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password: pass })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok && data.token) {
+                    try { sessionStorage.setItem('talora_user_token', data.token); } catch (_) {}
+                    window.location.href = 'account.html';
+                } else {
+                    msg.className = 'form-message error';
+                    msg.textContent = data.error || 'Invalid email or password.';
+                }
+            } catch {
+                msg.className = 'form-message error';
+                msg.textContent = 'Unable to reach the server. Please try again.';
+            } finally {
+                btn.disabled = false; btn.textContent = 'Log In';
+            }
+        });
+    </script>
+</body>
+</html>

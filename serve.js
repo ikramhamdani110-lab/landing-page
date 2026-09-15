@@ -4,6 +4,7 @@ const path = require('path');
 const { createDb, validateAndStore } = require('./contact-core');
 const cc = require('./content-core');
 const sc = require('./site-core');
+const uapi = require('./auth-user-api');
 const root = __dirname;
 const siteDb = sc.createDb(path.join(root, process.env.DATABASE_PATH || 'talora.db'));
 const mime = {'.html':'text/html','.css':'text/css','.js':'text/javascript','.png':'image/png','.jpg':'image/jpeg','.gif':'image/gif','.svg':'image/svg+xml','.mp4':'video/mp4','.webm':'video/webm','.ico':'image/x-icon'};
@@ -120,8 +121,6 @@ async function handleContent(req, res, p) {
   return res.end(JSON.stringify({ success: false, message: 'Method not allowed.' }));
 }
 
-http.createServer((req, res) => { handleRequest(req, res); });
-
 async function handleRequest(req, res) {
   let p = decodeURIComponent(req.url.split('?')[0]);
 const q = Object.fromEntries(new URLSearchParams(req.url.split('?')[1] || ''));
@@ -145,12 +144,9 @@ const q = Object.fromEntries(new URLSearchParams(req.url.split('?')[1] || ''));
           : { success: false, message: result.message });
     });
   }
-  if (p === '/api/auth/me') {
-    if (!cc.verifyAuth(req)) {
-      return sendJson(res, 401, { success: false, message: 'You are not authorized to perform this action.' });
-    }
-    return sendJson(res, 200, { success: true, user: { username: cc.adminCredentials().username, role: 'admin' } });
-  }
+  // Dual-aware: a valid user token => user profile, a valid admin token => admin info,
+  // no/invalid token => 401. Uses the same shared handler as the Vercel deployment.
+  if (p === '/api/auth/me') return uapi.me(req, res);
   // Public, unauthenticated endpoint: only PUBLISHED website content is exposed
   if (p === '/api/website-content') {
     if (req.method !== 'GET') {
@@ -200,6 +196,11 @@ const q = Object.fromEntries(new URLSearchParams(req.url.split('?')[1] || ''));
   if (p === '/api/content' || p.startsWith('/api/content/')) {
     return handleContent(req, res, p);
   }
+  // ---- Task 4: user authentication API ----
+  if (p === '/api/auth/register' && req.method === 'POST') return uapi.register(req, res);
+  if (p === '/api/auth/user-login' && req.method === 'POST') return uapi.login(req, res);
+  if (p === '/api/auth/logout' && req.method === 'POST') return uapi.logout(req, res);
+  if (p === '/api/user/profile' && req.method === 'GET') return uapi.profile(req, res);
   if (p === '/') p = '/index.html';
   const file = path.join(root, p);
   if (!file.startsWith(root)) { res.writeHead(403); return res.end('Forbidden'); }
