@@ -198,8 +198,19 @@ function adminCredentials() {
   };
 }
 
+// In production (Vercel) a missing ADMIN_TOKEN_SECRET must fail loudly rather
+// than silently falling back to an insecure, predictable secret.
+const IS_PROD = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+
+class MissingSecretError extends Error {}
+
 function tokenSecret() {
-  return process.env.ADMIN_TOKEN_SECRET || ('talora-fallback-secret::' + adminCredentials().password);
+  const s = process.env.ADMIN_TOKEN_SECRET;
+  if (s) return s;
+  if (IS_PROD) {
+    throw new MissingSecretError('ADMIN_TOKEN_SECRET environment variable is not set. Admin authentication is disabled until it is configured in production.');
+  }
+  return 'talora-fallback-secret::' + adminCredentials().password; // local dev only
 }
 
 function sign(payload) {
@@ -214,6 +225,15 @@ function issueToken() {
 
 // Returns true if the Authorization header carries a valid, unexpired admin token.
 function verifyAuth(req) {
+  try {
+    return verifyAuthInner(req);
+  } catch (e) {
+    if (e instanceof MissingSecretError) console.error('verifyAuth:', e.message);
+    return false; // misconfigured server: never accept tokens
+  }
+}
+
+function verifyAuthInner(req) {
   const header = req.headers && (req.headers.authorization || req.headers.Authorization);
   if (!header || typeof header !== 'string') return false;
   const m = /^Bearer\s+(.+)$/i.exec(header.trim());
@@ -239,8 +259,16 @@ function login(body) {
   if (username !== creds.username || password !== creds.password) {
     return { ok: false, status: 401, message: 'Invalid username or password.' };
   }
-  const { token, expiresAt } = issueToken();
-  return { ok: true, token, expiresAt };
+  try {
+    const { token, expiresAt } = issueToken();
+    return { ok: true, token, expiresAt };
+  } catch (e) {
+    if (e instanceof MissingSecretError) {
+      console.error('admin login:', e.message);
+      return { ok: false, status: 503, message: 'Authentication is not configured on this server. Missing ADMIN_TOKEN_SECRET.' };
+    }
+    throw e;
+  }
 }
 
 module.exports = {

@@ -30,9 +30,13 @@ function createDb(dbFile) {
     email TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'user',
+    signup_type TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   )`);
+    // Migration for pre-existing local SQLite databases created before signup_type existed
+  const _cols = db.prepare(`PRAGMA table_info(users)`).all().map(c => c.name);
+  if (!_cols.includes('signup_type')) { db.exec(`ALTER TABLE users ADD COLUMN signup_type TEXT`); }
   db.exec(`CREATE TABLE IF NOT EXISTS revoked_tokens (
     token_hash TEXT PRIMARY KEY,
     expires_at INTEGER NOT NULL
@@ -63,6 +67,7 @@ async function ensurePgTable() {
     token_hash TEXT PRIMARY KEY,
     expires_at BIGINT NOT NULL
   )`);
+  await getPool().query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS signup_type TEXT NOT NULL DEFAULT 'project'`);
 }
 
 // Safe public shape — NEVER includes password_hash
@@ -71,6 +76,7 @@ function shapeUser(r) {
     id: r.id,
     fullName: r.full_name,
     email: r.email,
+    signupType: r.signup_type || 'project',
     role: r.role,
     createdAt: r.created_at ? new Date(r.created_at).toISOString() : null
   };
@@ -137,6 +143,7 @@ async function registerUser(db, body) {
   const v = validateRegistration(body);
   if (!v.ok) return v;
   const { fullName, email, password } = v.fields;
+  const signupType = body && body.signupType === 'talent' ? 'talent' : 'project';
   const passwordHash = hashPassword(password); // role is NOT taken from the request — always 'user'
 
   try {
@@ -145,14 +152,14 @@ async function registerUser(db, body) {
       const dup = await getPool().query('SELECT id FROM users WHERE email = $1', [email]);
       if (dup.rows.length) return { ok: false, status: 409, message: 'An account with this email already exists.', field: 'email' };
       const res = await getPool()
-        .query("INSERT INTO users (full_name, email, password_hash, role) VALUES ($1, $2, $3, 'user') RETURNING *",
-          [fullName, email, passwordHash]);
+        .query("INSERT INTO users (full_name, email, password_hash, role, signup_type) VALUES ($1, $2, $3, 'user', $4) RETURNING *",
+          [fullName, email, passwordHash, signupType]);
       return { ok: true, user: shapeUser(res.rows[0]) };
     }
     const dup = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
     if (dup) return { ok: false, status: 409, message: 'An account with this email already exists.', field: 'email' };
-    const info = db.prepare("INSERT INTO users (full_name, email, password_hash, role) VALUES (?, ?, ?, 'user')")
-      .run(fullName, email, passwordHash);
+    const info = db.prepare("INSERT INTO users (full_name, email, password_hash, role, signup_type) VALUES (?, ?, ?, 'user', ?)")
+      .run(fullName, email, passwordHash, signupType);
     const row = db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
     return { ok: true, user: shapeUser(row) };
   } catch (err) {
@@ -194,8 +201,17 @@ async function loginUser(db, body) {
 }
 
 // ---------- User tokens (separate secret from admin tokens) ----------
+const USER_IS_PROD = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+
+class MissingUserSecretError extends Error {}
+
 function userTokenSecret() {
-  return process.env.USER_TOKEN_SECRET || ('talora-user-secret::' + (process.env.ADMIN_TOKEN_SECRET || process.env.ADMIN_PASSWORD || 'talora-admin'));
+  const s = process.env.USER_TOKEN_SECRET;
+  if (s) return s;
+  if (USER_IS_PROD) {
+    throw new MissingUserSecretError('USER_TOKEN_SECRET environment variable is not set. User authentication is disabled until it is configured in production.');
+  }
+  return 'talora-user-secret::' + (process.env.ADMIN_TOKEN_SECRET || process.env.ADMIN_PASSWORD || 'talora-admin'); // local dev only
 }
 
 function signUser(payload) {

@@ -16,7 +16,19 @@
     <div class="auth-view">
         <div class="auth-card">
             <h1>Create your account</h1>
-            <p class="auth-sub">Join the TALORA ecosystem</p>
+            <p class="auth-sub">How would you like to begin?</p>
+            <div class="signup-choice" id="signupChoice">
+                <button type="button" class="choice-card" data-intent="project">
+                    <span class="choice-icon"><i class='bx bx-briefcase-alt-2'></i></span>
+                    <strong>Start a Project</strong>
+                    <small>For clients with a project, idea, or digital need.</small>
+                </button>
+                <button type="button" class="choice-card" data-intent="talent">
+                    <span class="choice-icon"><i class='bx bx-user-check'></i></span>
+                    <strong>Join TALORA</strong>
+                    <small>For talented people who want to join the ecosystem.</small>
+                </button>
+            </div>
             <form id="registerForm" autocomplete="off" novalidate>
                 <label class="field" id="fName">
                     <span>Full Name</span>
@@ -49,6 +61,15 @@
         const form = document.getElementById('registerForm');
         const msg = document.getElementById('regMessage');
         const btn = document.getElementById('registerBtn');
+        let signupType = 'talent';
+        document.querySelectorAll('#signupChoice .choice-card').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('#signupChoice .choice-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                signupType = card.dataset.intent;
+            });
+        });
+        document.querySelector('#signupChoice .choice-card[data-intent="project"]').classList.add('selected');
 
         function setInvalid(id, bad) { document.getElementById(id).classList.toggle('invalid', bad); }
 
@@ -75,7 +96,7 @@
                 const res = await fetch('/api/auth/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ fullName: name, email, password: pass, confirmPassword: pass2 })
+                    body: JSON.stringify({ fullName: name, email, password: pass, confirmPassword: pass2, signupType })
                 });
                 const data = await res.json().catch(() => ({}));
                 if (res.ok) {

@@ -359,3 +359,59 @@ if (isMobileDevice()) {
 }
 
 window.addEventListener('load', playHero);
+/* ---------- Navbar authentication state ----------
+   Checks the existing token (if any) against GET /api/auth/me.
+   Logged in  -> shows Account / Logout
+   Logged out -> shows Log In / Sign Up                                   */
+(function () {
+    const TOKEN_KEY = 'talora_user_token';
+    const loggedOut = document.querySelectorAll('.auth-nav');
+    const loggedIn = document.querySelectorAll('.auth-nav-logged-in');
+
+    function setState(authed) {
+        loggedOut.forEach(el => { el.style.display = authed ? 'none' : ''; });
+        loggedIn.forEach(el => { el.style.display = authed ? '' : 'none'; });
+    }
+
+    async function logout() {
+        try {
+            const token = sessionStorage.getItem(TOKEN_KEY);
+            if (token) {
+                await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+            }
+        } catch (_) { /* best effort — clear locally regardless */ }
+        try { sessionStorage.removeItem(TOKEN_KEY); } catch (_) {}
+        setState(false);
+        window.location.href = 'index.html';
+    }
+
+    document.querySelectorAll('#navLogoutBtn, .nav-logout-btn').forEach(btn => {
+        btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            logout();
+        });
+    });
+
+    (async function init() {
+        let token = null;
+        try { token = sessionStorage.getItem(TOKEN_KEY); } catch (_) {}
+        if (!token) { setState(false); return; }
+        try {
+            const res = await fetch('/api/auth/me', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            // Valid user session -> Account / Logout; anything else (401, expired,
+            // revoked, or an admin token) -> Log In / Sign Up
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.user) { setState(true); return; }
+            }
+            setState(false);
+        } catch (_) {
+            setState(false); // network issue — show default logged-out nav
+        }
+    })();
+})();

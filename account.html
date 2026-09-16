@@ -23,6 +23,8 @@
                 <div class="account-row"><span class="k">Email</span><span class="v" id="accEmail">—</span></div>
                 <div class="account-row"><span class="k">Role</span><span class="v"><span class="account-badge" id="accRole">user</span></span></div>
                 <div class="account-row"><span class="k">Member since</span><span class="v" id="accSince">—</span></div>
+                <div class="account-row"><span class="k">You joined as</span><span class="v"><span class="account-badge"
+                            id="accSignupType">—</span></span></div>
             </div>
             <div class="account-actions">
                 <button class="btn btn-ghost" id="logoutBtn"><i class='bx bx-log-out'></i> Log Out</button>
@@ -68,6 +70,8 @@
                 document.getElementById('accEmail').textContent = u.email || '—';
                 document.getElementById('accRole').textContent = u.role || 'user';
                 document.getElementById('accSince').textContent = formatDate(u.createdAt || u.created_at);
+                const st = (u.signupType || u.signup_type || '').toString().toLowerCase();
+                document.getElementById('accSignupType').textContent = st === 'project' ? 'Start a Project' : st === 'talent' ? 'Join TALORA' : (st || '—');
                 accountCard.classList.remove('hidden');
             } catch {
                 guestCard.classList.remove('hidden');
