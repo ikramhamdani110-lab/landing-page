@@ -21,12 +21,6 @@ function pgConnectionString() {
 }
 
 function createDb(dbFile) {
-  // On Vercel there is no writable filesystem, so SQLite can never be used there.
-  // Prefer Postgres whenever a connection string exists; only fall back to
-  // better-sqlite3 for local development (where the module is installed).
-  if (pgConnectionString() || process.env.VERCEL === '1') {
-    return null; // callers use the async pg path; db object is not needed
-  }
   const Database = require('better-sqlite3');
   const db = new Database(dbFile);
   db.pragma('journal_mode = WAL');

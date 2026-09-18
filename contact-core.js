@@ -27,6 +27,9 @@ function createDb(dbFile) {
   )`);
   return db;
 }
+// On Vercel there is no writable filesystem and better-sqlite3 is not bundled,
+// so expose a null-db creator for serverless: the pg path never touches it.
+function createDbServerless() { return null; }
 
 // ---- PostgreSQL (production, hosted) ----
 let pgPool = null;
@@ -85,4 +88,4 @@ async function validateAndStore(db, body) {
   }
 }
 
-module.exports = { EMAIL_RE, createDb, validateAndStore, pgConnectionString, dbPath: (f) => path.join(__dirname, f) };
+module.exports = { EMAIL_RE, createDb: process.env.VERCEL === '1' ? createDbServerless : createDb, validateAndStore, pgConnectionString, dbPath: (f) => path.join(__dirname, f) };
