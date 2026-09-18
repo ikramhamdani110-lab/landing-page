@@ -30,7 +30,7 @@ async function register(req, res) {
       const result = await auc.registerUser(db, body);
       if (!result.ok) return json(res, result.status, { error: result.message, field: result.field });
       return json(res, 201, { ok: true, message: 'Account created successfully. You can now log in.', user: result.user });
-    } finally { if (db.close) db.close(); }
+    } finally { if (db && db.close) db.close(); }
   } catch (err) {
     console.error('register error:', err);
     return json(res, 500, { error: 'Unable to create account. Please try again.' });
@@ -57,7 +57,7 @@ async function login(req, res) {
         expiresAt: result.expiresAt,
         user: result.user
       });
-    } finally { if (db.close) db.close(); }
+    } finally { if (db && db.close) db.close(); }
   } catch (err) {
     console.error('login error:', err);
     return json(res, 500, { error: 'Unable to log in. Please try again.' });
@@ -87,7 +87,7 @@ async function profile(req, res) {
       const result = await auc.updateUserProfile(db, payload.sub, body);
       if (!result.ok) return json(res, result.status, { error: result.message, field: result.field });
       return json(res, 200, { ok: true, message: 'Profile updated successfully.', user: result.user });
-    } finally { if (db.close) db.close(); }
+    } finally { if (db && db.close) db.close(); }
   } catch (err) {
     console.error('profile error:', err);
     return json(res, 500, { error: 'Unable to update your profile. Please try again.' });
@@ -103,7 +103,7 @@ async function logout(req, res) {
     const db = cc.createDb(withDbPath(req));
     try {
       await auc.revokeUserToken(db, token);
-    } finally { if (db.close) db.close(); }
+    } finally { if (db && db.close) db.close(); }
   } catch (err) {
     console.error('logout error:', err);
     return json(res, 500, { error: 'Unable to log out. Please try again.' });
