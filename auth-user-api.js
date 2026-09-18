@@ -65,15 +65,32 @@ async function login(req, res) {
 }
 
 // GET /api/user/profile  (protected — requires a valid user bearer token)
+// PUT /api/user/profile (protected — updates the token's own profile; identity from token only)
 async function profile(req, res) {
-  if ((req.method || 'GET').toUpperCase() !== 'GET') return json(res, 405, { error: 'Method not allowed.' });
+  const method = (req.method || 'GET').toUpperCase();
+  if (method !== 'GET' && method !== 'PUT') return json(res, 405, { error: 'Method not allowed.' });
   try {
-    const user = await auc.getUserFromRequest(req);
-    if (!user) return json(res, 401, { error: 'Unauthorized.' });
-    return json(res, 200, { ok: true, user });
+    const db = cc.createDb(withDbPath(req));
+    try {
+      const payload = auc.verifyUserToken(req);
+      if (!payload || await auc.isUserTokenRevoked(db, auc.extractBearer(req))) {
+        return json(res, 401, { error: 'Unauthorized.' });
+      }
+      if (method === 'GET') {
+        const user = await auc.getUserById(db, payload.sub);
+        if (!user) return json(res, 401, { error: 'Unauthorized.' });
+        return json(res, 200, { ok: true, user });
+      }
+      let chunks = [];
+      for await (const c of req) chunks.push(c);
+      const body = Buffer.concat(chunks).toString('utf8');
+      const result = await auc.updateUserProfile(db, payload.sub, body);
+      if (!result.ok) return json(res, result.status, { error: result.message, field: result.field });
+      return json(res, 200, { ok: true, message: 'Profile updated successfully.', user: result.user });
+    } finally { if (db.close) db.close(); }
   } catch (err) {
     console.error('profile error:', err);
-    return json(res, 500, { error: 'Unable to load profile.' });
+    return json(res, 500, { error: 'Unable to update your profile. Please try again.' });
   }
 }
 

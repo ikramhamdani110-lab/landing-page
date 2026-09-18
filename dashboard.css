@@ -1,0 +1,116 @@
+/* TALORA — Customer Dashboard (Task 5)
+   Reuses design tokens from auth.css. */
+
+/* ---------- Shell / layout ---------- */
+.dash-shell { display: flex; min-height: 100vh; }
+
+.dash-sidebar {
+    width: 240px; flex-shrink: 0; padding: 1.4rem 1.1rem;
+    display: flex; flex-direction: column; gap: 1.6rem;
+    background: rgba(8, 11, 24, 0.7);
+    border-right: 1px solid var(--border);
+    position: sticky; top: 0; height: 100vh;
+}
+.dash-brand-row { display: flex; align-items: center; justify-content: space-between; }
+.dash-sidebar-close { display: none; background: none; border: none; color: var(--text-secondary); font-size: 1.4rem; cursor: pointer; }
+
+.dash-nav { display: flex; flex-direction: column; gap: 0.3rem; flex: 1; }
+.dash-nav-item {
+    display: flex; align-items: center; gap: 0.65rem;
+    padding: 0.6rem 0.85rem; border-radius: 10px;
+    color: var(--text-secondary); text-decoration: none; font-size: 0.95rem;
+    border: 1px solid transparent; transition: var(--transition);
+}
+.dash-nav-item i { font-size: 1.1rem; }
+.dash-nav-item:hover { color: #fff; background: rgba(114, 161, 222, 0.08); }
+.dash-nav-item.active {
+    color: #fff; background: rgba(114, 161, 222, 0.14);
+    border-color: var(--primary-color-lighter);
+    box-shadow: 0 0 10px var(--primary-color-lighter);
+}
+
+.dash-main { flex: 1; min-width: 0; padding: 1.6rem 2rem 3rem; }
+
+.dash-topbar {
+    display: none; align-items: center; gap: 0.8rem; margin-bottom: 1.4rem;
+}
+.dash-burger {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; border-radius: 10px;
+    background: rgba(114, 161, 222, 0.1); border: 1px solid var(--border);
+    color: var(--text-color); font-size: 1.3rem; cursor: pointer;
+}
+.dash-topbar-title { font-weight: 700; color: #fff; letter-spacing: 0.04em; }
+
+/* ---------- Loading / guest states ---------- */
+.dash-loading {
+    display: flex; flex-direction: column; align-items: center; gap: 1rem;
+    padding: 6rem 1rem; color: var(--text-secondary);
+}
+.dash-spinner {
+    width: 34px; height: 34px; border-radius: 50%;
+    border: 3px solid var(--border); border-top-color: var(--primary-color);
+    animation: dashSpin 0.8s linear infinite;
+}
+@keyframes dashSpin { to { transform: rotate(360deg); } }
+
+.dash-auth-card { max-width: 420px; margin: 5rem auto 0; }
+
+/* ---------- Content ---------- */
+.dash-content { animation: authFadeIn 0.4s ease; }
+.dash-welcome { font-size: 1.7rem; color: #fff; letter-spacing: 0.03em; }
+.dash-welcome-sub { color: var(--text-secondary); margin: 0.2rem 0 1.8rem; font-size: 0.95rem; }
+
+.dash-cards { display: grid; gap: 1.2rem; max-width: 720px; }
+.dash-card {
+    background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px;
+    box-shadow: 0 0 25px rgba(114, 161, 222, 0.12);
+    padding: 1.5rem 1.6rem;
+}
+.dash-card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 0.8rem; margin-bottom: 1.1rem;
+}
+.dash-card-head h2 {
+    font-size: 1.05rem; color: #fff; letter-spacing: 0.04em;
+    display: flex; align-items: center; gap: 0.5rem;
+}
+.btn-sm { padding: 0.4rem 0.85rem; font-size: 0.85rem; }
+
+.dash-rows { display: flex; flex-direction: column; }
+.dash-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    padding: 0.75rem 0; border-bottom: 1px solid rgba(114, 161, 222, 0.1);
+}
+.dash-row:last-child { border-bottom: none; }
+.dash-row .k { color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.03em; }
+.dash-row .v { color: #fff; font-weight: 600; text-align: right; word-break: break-word; }
+
+/* ---------- Edit mode ---------- */
+.dash-edit { display: flex; flex-direction: column; gap: 0.9rem; }
+.dash-edit-actions { display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 0.2rem; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 900px) {
+    .dash-sidebar {
+        position: fixed; left: 0; top: 0; bottom: 0; z-index: 60;
+        transform: translateX(-105%); transition: transform 0.28s ease;
+        background: rgba(6, 8, 18, 0.97);
+    }
+    .dash-sidebar.open { transform: none; }
+    .dash-sidebar-close { display: inline-flex; }
+    .dash-backdrop {
+        position: fixed; inset: 0; z-index: 50;
+        background: rgba(0, 0, 0, 0.55); opacity: 0; pointer-events: none;
+        transition: opacity 0.28s ease;
+    }
+    .dash-backdrop.show { opacity: 1; pointer-events: auto; }
+    .dash-topbar { display: flex; }
+    .dash-main { padding: 1.1rem 1.1rem 3rem; }
+    .dash-welcome { font-size: 1.35rem; }
+    .dash-card { padding: 1.2rem 1.1rem; }
+    .dash-card-head { flex-wrap: wrap; }
+    .dash-row { flex-direction: column; align-items: flex-start; gap: 0.15rem; }
+    .dash-row .v { text-align: left; }
+    .dash-edit-actions { flex-wrap: wrap; }
+}

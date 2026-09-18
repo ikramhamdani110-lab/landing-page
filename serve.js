@@ -200,8 +200,9 @@ const q = Object.fromEntries(new URLSearchParams(req.url.split('?')[1] || ''));
   if (p === '/api/auth/register' && req.method === 'POST') return uapi.register(req, res);
   if (p === '/api/auth/user-login' && req.method === 'POST') return uapi.login(req, res);
   if (p === '/api/auth/logout' && req.method === 'POST') return uapi.logout(req, res);
-  if (p === '/api/user/profile' && req.method === 'GET') return uapi.profile(req, res);
+  if (p === '/api/user/profile' && (req.method === 'GET' || req.method === 'PUT')) return uapi.profile(req, res);
   if (p === '/') p = '/index.html';
+  if (p === '/dashboard') p = '/dashboard.html';
   const file = path.join(root, p);
   if (!file.startsWith(root)) { res.writeHead(403); return res.end('Forbidden'); }
   fs.readFile(file, (err, data) => {

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — TALORA</title>
+    <link rel="stylesheet" href="auth.css">
+    <link rel="stylesheet" href="dashboard.css">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+</head>
+<body>
+    <div class="dash-shell">
+        <!-- Sidebar / Navigation -->
+        <aside class="dash-sidebar" id="dashSidebar">
+            <div class="dash-brand-row">
+                <a class="auth-logo" href="index.html">TALORA</a>
+                <button class="dash-sidebar-close" id="sidebarClose" aria-label="Close menu">
+                    <i class='bx bx-x'></i>
+                </button>
+            </div>
+            <nav class="dash-nav">
+                <a href="#dashboard" class="dash-nav-item active" data-nav="dashboard"><i class='bx bxs-dashboard'></i> Dashboard</a>
+                <a href="#profile" class="dash-nav-item" data-nav="profile"><i class='bx bx-user'></i> Profile</a>
+                <a href="#settings" class="dash-nav-item" data-nav="settings"><i class='bx bx-cog'></i> Settings</a>
+            </nav>
+            <div class="dash-nav-footer">
+                <button class="btn btn-ghost btn-block" id="logoutBtn"><i class='bx bx-log-out'></i> Log Out</button>
+            </div>
+        </aside>
+        <div class="dash-backdrop" id="sidebarBackdrop"></div>
+
+        <!-- Main content -->
+        <main class="dash-main">
+            <header class="dash-topbar">
+                <button class="dash-burger" id="sidebarOpen" aria-label="Open menu"><i class='bx bx-menu'></i></button>
+                <span class="dash-topbar-title" id="topbarTitle">Dashboard</span>
+            </header>
+
+            <!-- Loading state -->
+            <div class="dash-loading" id="dashLoading">
+                <span class="dash-spinner"></span>
+                <p>Loading your account…</p>
+            </div>
+
+            <!-- Auth required state -->
+            <div class="auth-card dash-auth-card hidden" id="dashGuest">
+                <h1>Sign in required</h1>
+                <p class="auth-sub">Please log in to view your TALORA dashboard.</p>
+                <div class="account-actions" style="display:flex; gap:0.6rem; justify-content:center;">
+                    <a class="btn btn-primary" href="login.html">Log In</a>
+                    <a class="btn btn-ghost" href="register.html">Register</a>
+                </div>
+            </div>
+
+            <!-- Authenticated dashboard -->
+            <div class="dash-content hidden" id="dashContent">
+                <section class="dash-panel" id="panel-dashboard">
+                    <h1 class="dash-welcome">Welcome, <span id="dashName">—</span></h1>
+                    <p class="dash-welcome-sub">Your Account</p>
+
+                    <div class="dash-cards">
+                        <article class="dash-card">
+                            <header class="dash-card-head">
+                                <h2><i class='bx bx-id-card'></i> Profile</h2>
+                                <button class="btn btn-ghost btn-sm" id="editBtn"><i class='bx bx-edit-alt'></i> Edit Profile</button>
+                            </header>
+                            <!-- View mode -->
+                            <div class="dash-rows" id="viewMode">
+                                <div class="dash-row"><span class="k">Name</span><span class="v" id="pName">—</span></div>
+                                <div class="dash-row"><span class="k">Email</span><span class="v" id="pEmail">—</span></div>
+                                <div class="dash-row"><span class="k">Member since</span><span class="v" id="pSince">—</span></div>
+                                <div class="dash-row"><span class="k">Account type</span><span class="v"><span class="account-badge" id="pSignupType">—</span></span></div>
+                                <div class="dash-row"><span class="k">Role</span><span class="v"><span class="account-badge" id="pRole">user</span></span></div>
+                            </div>
+                            <!-- Edit mode -->
+                            <form class="dash-edit hidden" id="editMode" novalidate>
+                                <label class="field" id="fName">
+                                    <span>Name</span>
+                                    <input type="text" id="editName" maxlength="100" autocomplete="name">
+                                    <em class="field-error">Name must be between 2 and 100 characters.</em>
+                                </label>
+                                <label class="field" id="fEmail">
+                                    <span>Email</span>
+                                    <input type="email" id="editEmail" maxlength="200" autocomplete="email">
+                                    <em class="field-error">Please enter a valid email address.</em>
+                                </label>
+                                <div class="form-message" id="editMessage" role="alert"></div>
+                                <div class="dash-edit-actions">
+                                    <button type="button" class="btn btn-ghost" id="cancelBtn">Cancel</button>
+                                    <button type="submit" class="btn btn-primary" id="saveBtn">Save Changes</button>
+                                </div>
+                            </form>
+                        </article>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="dashboard.js"></script>
+</body>
+</html>

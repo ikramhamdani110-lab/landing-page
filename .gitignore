@@ -14,3 +14,8 @@ neon-install.log
 serve.log
 serve-err.log
 patch-revoke.mjs
+qa-dashboard.mjs
+qa-dashshots.mjs
+*.png
+!images/**
+!videos/**

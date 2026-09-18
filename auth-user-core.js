@@ -200,6 +200,67 @@ async function loginUser(db, body) {
   return { ok: true, user: shapeUser(row), token, expiresAt };
 }
 
+// ---------- Profile update (Task 5) ----------
+// Only permitted fields can change: full_name and email. Identity always comes
+// from the authenticated token (userId), never from the request body. Protected
+// columns (id, password_hash, role, created_at) are never accepted from input.
+// Returns { ok: true, user } or { ok: false, status, message, field? }
+async function updateUserProfile(db, userId, body) {
+  let data;
+  try { data = typeof body === 'string' ? JSON.parse(body || '{}') : (body || {}); } catch { data = null; }
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    return { ok: false, status: 400, message: 'Invalid request body.' };
+  }
+  // Ignore anything that is not an allowed field — including id, role, password etc.
+  const fullName = typeof (data.fullName ?? data.full_name) === 'string' ? (data.fullName ?? data.full_name).trim() : undefined;
+  const email = typeof data.email === 'string' ? data.email.trim().toLowerCase() : undefined;
+
+  if (fullName !== undefined && (fullName.length < 2 || fullName.length > 100)) {
+    return { ok: false, status: 400, message: 'Full name must be between 2 and 100 characters.', field: 'fullName' };
+  }
+  if (email !== undefined && (email.length > 200 || !EMAIL_RE.test(email))) {
+    return { ok: false, status: 400, message: 'Please enter a valid email address.', field: 'email' };
+  }
+  if (fullName === undefined && email === undefined) {
+    return { ok: false, status: 400, message: 'Nothing to update.' };
+  }
+
+  try {
+    if (pgConnectionString()) {
+      await ensurePgTable();
+      if (email !== undefined) {
+        const dup = await getPool().query('SELECT id FROM users WHERE email = $1 AND id <> $2', [email, userId]);
+        if (dup.rows.length) return { ok: false, status: 409, message: 'An account with this email already exists.', field: 'email' };
+      }
+      const sets = [], vals = [];
+      if (fullName !== undefined) { sets.push(`full_name = $${vals.length + 1}`); vals.push(fullName); }
+      if (email !== undefined) { sets.push(`email = $${vals.length + 1}`); vals.push(email); }
+      sets.push(`updated_at = now()`);
+      const res = await getPool().query(
+        `UPDATE users SET ${sets.join(', ')} WHERE id = $${vals.length + 1} RETURNING *`, [...vals, userId]);
+      if (!res.rows.length) return { ok: false, status: 404, message: 'Account not found.' };
+      return { ok: true, user: shapeUser(res.rows[0]) };
+    }
+    if (email !== undefined) {
+      const dup = db.prepare('SELECT id FROM users WHERE email = ? AND id <> ?').get(email, userId);
+      if (dup) return { ok: false, status: 409, message: 'An account with this email already exists.', field: 'email' };
+    }
+    const sets = [], vals = [];
+    if (fullName !== undefined) { sets.push('full_name = ?'); vals.push(fullName); }
+    if (email !== undefined) { sets.push('email = ?'); vals.push(email); }
+    sets.push("updated_at = datetime('now')");
+    const info = db.prepare(`UPDATE users SET ${sets.join(', ')} WHERE id = ?`).run(...vals, userId);
+    if (!info.changes) return { ok: false, status: 404, message: 'Account not found.' };
+    const row = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+    return { ok: true, user: shapeUser(row) };
+  } catch (err) {
+    if (String(err.message).includes('UNIQUE') || err.code === '23505') {
+      return { ok: false, status: 409, message: 'An account with this email already exists.', field: 'email' };
+    }
+    throw err;
+  }
+}
+
 // ---------- User tokens (separate secret from admin tokens) ----------
 const USER_IS_PROD = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
 
@@ -334,7 +395,7 @@ function clientIp(req) {
 
 module.exports = {
   pgConnectionString, createDb,
-  validateRegistration, registerUser, loginUser,
+  validateRegistration, registerUser, loginUser, updateUserProfile,
   hashPassword, verifyPassword,
   issueUserToken, verifyUserToken, getUserById, getUserFromRequest,
   extractBearer, revokeUserToken, isUserTokenRevoked,

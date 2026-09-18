@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
     <link rel="stylesheet" href="auth.css">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
 </head>
+
 <body>
     <header class="auth-topbar">
         <a class="auth-logo" href="index.html">TALORA</a>
@@ -60,8 +62,8 @@
                 });
                 const data = await res.json().catch(() => ({}));
                 if (res.ok && data.token) {
-                    try { sessionStorage.setItem('talora_user_token', data.token); } catch (_) {}
-                    window.location.href = 'account.html';
+                    try { sessionStorage.setItem('talora_user_token', data.token); } catch (_) { }
+                    window.location.href = 'dashboard.html';
                 } else {
                     msg.className = 'form-message error';
                     msg.textContent = data.error || 'Invalid email or password.';
@@ -75,4 +77,5 @@
         });
     </script>
 </body>
+
 </html>
