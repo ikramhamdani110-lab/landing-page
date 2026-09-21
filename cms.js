@@ -91,6 +91,7 @@
     if (user && user.username) $('adminName').textContent = user.username;
     loadContent();
     loadSiteContent();
+    loadServices();
   }
 
   async function handleLogin(e) {
@@ -367,12 +368,234 @@
   });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { closeModal(); closeDelete(); }
+    if (e.key === 'Escape') { closeModal(); closeDelete(); closeServiceModal(); closeServiceDelete(); }
   });
+
+  // ============================================================
+  // Services manager (Task 6) — /api/admin/services
+  // Same auth, helpers and conventions as the content manager.
+  // ============================================================
+  let serviceItems = [];
+  let editingServiceId = null;
+  let deletingServiceId = null;
+
+  function showServiceState(state) {
+    ['serviceLoadingState', 'serviceErrorState', 'serviceEmptyState', 'serviceTableWrap'].forEach(id => $(id).classList.add('hidden'));
+    const map = { loading: 'serviceLoadingState', error: 'serviceErrorState', empty: 'serviceEmptyState', table: 'serviceTableWrap' };
+    $(map[state]).classList.remove('hidden');
+  }
+
+  function showServiceAlert(kind, msg) {
+    const box = $('serviceAlertBox');
+    box.textContent = msg;
+    box.className = 'alert ' + kind;
+    box.classList.remove('hidden');
+    clearTimeout(showServiceAlert._t);
+    showServiceAlert._t = setTimeout(() => box.classList.add('hidden'), 4500);
+  }
+
+  async function loadServices() {
+    showServiceState('loading');
+    try {
+      const data = await api('/api/admin/services');
+      serviceItems = Array.isArray(data.items) ? data.items : [];
+      renderServices();
+    } catch (err) {
+      if (err.status === 401) { setToken(''); showLogin(); return; }
+      $('serviceErrorText').textContent = err.message || 'Failed to load services.';
+      showServiceState('error');
+    }
+  }
+
+  function renderServices() {
+    const view = serviceItems;
+    $('serviceCountPill').textContent = view.length;
+    if (view.length === 0) return showServiceState('empty');
+    showServiceState('table');
+
+    $('serviceTableBody').innerHTML = view.map(it => `
+      <tr data-service-id="${it.id}">
+        <td>
+          <div class="cell-title">${escapeHtml(it.title)}</div>
+          <div class="cell-desc">${escapeHtml(it.description)}</div>
+        </td>
+        <td>${it.icon ? `<i class='bx ${escapeHtml(it.icon)}'></i> <code>${escapeHtml(it.icon)}</code>` : '<span class="cell-date">—</span>'}</td>
+        <td><span class="status-badge ${it.status === 'active' ? 'published' : 'draft'}">${escapeHtml(it.status)}</span></td>
+        <td class="cell-date">${fmtDate(it.createdAt)}</td>
+        <td class="cell-date">${fmtDate(it.updatedAt)}</td>
+        <td class="td-actions">
+          <button class="action-btn edit" data-svc-action="edit" title="Edit" aria-label="Edit"><i class='bx bx-edit'></i></button>
+          <button class="action-btn delete" data-svc-action="delete" title="Delete" aria-label="Delete"><i class='bx bx-trash'></i></button>
+        </td>
+      </tr>`).join('');
+
+    $('serviceCards').innerHTML = view.map(it => `
+      <div class="content-card" data-service-id="${it.id}">
+        <div class="cc-top">
+          <span class="cc-title">${escapeHtml(it.title)}</span>
+          <span class="status-badge ${it.status === 'active' ? 'published' : 'draft'}">${escapeHtml(it.status)}</span>
+        </div>
+        <div class="cc-desc">${escapeHtml(it.description)}</div>
+        <div class="cc-meta">
+          ${it.icon ? `<span class="category-tag"><i class='bx ${escapeHtml(it.icon)}'></i></span>` : ''}
+          <span class="cc-date">Created ${fmtDate(it.createdAt)}</span>
+          <span class="cc-date">Updated ${fmtDate(it.updatedAt)}</span>
+        </div>
+        <div class="cc-actions">
+          <button class="action-btn edit" data-svc-action="edit"><i class='bx bx-edit'></i> Edit</button>
+          <button class="action-btn delete" data-svc-action="delete"><i class='bx bx-trash'></i> Delete</button>
+        </div>
+      </div>`).join('');
+  }
+
+  function clearServiceFieldErrors() {
+    [['sfTitle', 'seTitle'], ['sfDescription', 'seDescription'], ['sfIcon', 'seIcon'], ['sfStatus', 'seStatus']]
+      .forEach(([f, e]) => setFieldError($(f), $(e), ''));
+  }
+
+  function openServiceCreate() {
+    editingServiceId = null;
+    $('serviceModalTitle').textContent = 'Add Service';
+    $('serviceSaveBtn').textContent = 'Create Service';
+    $('sfTitle').value = '';
+    $('sfDescription').value = '';
+    $('sfIcon').value = '';
+    $('sfStatus').value = 'active';
+    clearServiceFieldErrors();
+    showFormMessage($('serviceFormMessage'), 'info', '');
+    $('serviceModalOverlay').classList.remove('hidden');
+    $('sfTitle').focus();
+  }
+
+  async function openServiceEdit(id) {
+    editingServiceId = id;
+    $('serviceModalTitle').textContent = 'Edit Service';
+    $('serviceSaveBtn').textContent = 'Save Changes';
+    showFormMessage($('serviceFormMessage'), 'info', '');
+    clearServiceFieldErrors();
+    $('serviceModalOverlay').classList.remove('hidden');
+    $('serviceSaveBtn').disabled = true;
+    try {
+      // Load the existing record fresh from the backend
+      const data = await api('/api/admin/services/' + id);
+      const it = data.item;
+      $('sfTitle').value = it.title;
+      $('sfDescription').value = it.description;
+      $('sfIcon').value = it.icon || '';
+      $('sfStatus').value = it.status;
+    } catch (err) {
+      showFormMessage($('serviceFormMessage'), 'error', err.message || 'Failed to load this service.');
+    } finally {
+      $('serviceSaveBtn').disabled = false;
+    }
+  }
+
+  function validateServiceForm() {
+    clearServiceFieldErrors();
+    let ok = true;
+    if (!$('sfTitle').value.trim()) { setFieldError($('sfTitle'), $('seTitle'), 'Title is required.'); ok = false; }
+    else if ($('sfTitle').value.trim().length > 200) { setFieldError($('sfTitle'), $('seTitle'), 'Title must be 200 characters or fewer.'); ok = false; }
+    if (!$('sfDescription').value.trim()) { setFieldError($('sfDescription'), $('seDescription'), 'Description is required.'); ok = false; }
+    else if ($('sfDescription').value.trim().length > 2000) { setFieldError($('sfDescription'), $('seDescription'), 'Description must be 2,000 characters or fewer.'); ok = false; }
+    const st = $('sfStatus').value;
+    if (st !== 'active' && st !== 'inactive') { setFieldError($('sfStatus'), $('seStatus'), 'Status must be active or inactive.'); ok = false; }
+    return ok;
+  }
+
+  async function handleServiceSave(e) {
+    e.preventDefault();
+    if (!validateServiceForm()) return;
+    const payload = {
+      title: $('sfTitle').value.trim(),
+      description: $('sfDescription').value.trim(),
+      icon: $('sfIcon').value.trim(),
+      status: $('sfStatus').value
+    };
+    const msg = $('serviceFormMessage');
+    $('serviceSaveBtn').disabled = true;
+    showFormMessage(msg, 'info', '');
+    try {
+      let data;
+      if (editingServiceId == null) {
+        data = await api('/api/admin/services', { method: 'POST', body: JSON.stringify(payload) });
+      } else {
+        data = await api('/api/admin/services/' + editingServiceId, { method: 'PUT', body: JSON.stringify(payload) });
+      }
+      closeServiceModal();
+      showServiceAlert('success', data.message || 'Saved successfully.');
+      await loadServices(); // re-fetch from the database
+    } catch (err) {
+      if (err.status === 401) { closeServiceModal(); setToken(''); showLogin(); return; }
+      showFormMessage(msg, 'error', err.message || 'Failed to save service.');
+    } finally {
+      $('serviceSaveBtn').disabled = false;
+    }
+  }
+
+  function closeServiceModal() {
+    $('serviceModalOverlay').classList.add('hidden');
+    editingServiceId = null;
+  }
+
+  function openServiceDelete(id) {
+    const it = serviceItems.find(x => String(x.id) === String(id));
+    deletingServiceId = id;
+    $('serviceDeleteTitle').textContent = it ? it.title : '';
+    showFormMessage($('serviceDeleteMessage'), 'info', '');
+    $('serviceDeleteOverlay').classList.remove('hidden');
+  }
+
+  async function handleServiceDelete() {
+    if (deletingServiceId == null) return;
+    $('serviceDeleteConfirm').disabled = true;
+    showFormMessage($('serviceDeleteMessage'), 'info', '');
+    try {
+      const data = await api('/api/admin/services/' + deletingServiceId, { method: 'DELETE' });
+      closeServiceDelete();
+      showServiceAlert('success', data.message || 'Service deleted successfully.');
+      await loadServices();
+    } catch (err) {
+      if (err.status === 401) { closeServiceDelete(); setToken(''); showLogin(); return; }
+      showFormMessage($('serviceDeleteMessage'), 'error', err.message || 'Failed to delete service.');
+    } finally {
+      $('serviceDeleteConfirm').disabled = false;
+      deletingServiceId = null;
+    }
+  }
+
+  function closeServiceDelete() {
+    $('serviceDeleteOverlay').classList.add('hidden');
+  }
+
+  function initServices() {
+    $('svcAddBtn').addEventListener('click', openServiceCreate);
+    $('serviceForm').addEventListener('submit', handleServiceSave);
+    $('serviceCancelBtn').addEventListener('click', closeServiceModal);
+    $('serviceModalClose').addEventListener('click', closeServiceModal);
+    $('serviceModalOverlay').addEventListener('click', (e) => { if (e.target === $('serviceModalOverlay')) closeServiceModal(); });
+
+    $('serviceDeleteCancel').addEventListener('click', closeServiceDelete);
+    $('serviceDeleteClose').addEventListener('click', closeServiceDelete);
+    $('serviceDeleteConfirm').addEventListener('click', handleServiceDelete);
+    $('serviceDeleteOverlay').addEventListener('click', (e) => { if (e.target === $('serviceDeleteOverlay')) closeServiceDelete(); });
+
+    $('serviceRetryBtn').addEventListener('click', loadServices);
+
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-svc-action]');
+      if (!btn) return;
+      const row = btn.closest('[data-service-id]');
+      if (!row) return;
+      const id = row.dataset.serviceId;
+      if (btn.dataset.svcAction === 'edit') openServiceEdit(id);
+      if (btn.dataset.svcAction === 'delete') openServiceDelete(id);
+    });
+  }
 
   // ---------- boot ----------
   initAuth();
   initSiteContent();
+  initServices();
 
   // ============================================================
   // Website Content manager (per-section editing of the public site)

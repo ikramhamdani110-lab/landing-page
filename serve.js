@@ -4,6 +4,7 @@ const path = require('path');
 const { createDb, validateAndStore } = require('./contact-core');
 const cc = require('./content-core');
 const sc = require('./site-core');
+const svc = require('./services-core');
 const uapi = require('./auth-user-api');
 const root = __dirname;
 const siteDb = sc.createDb(path.join(root, process.env.DATABASE_PATH || 'talora.db'));
@@ -11,6 +12,7 @@ const mime = {'.html':'text/html','.css':'text/css','.js':'text/javascript','.pn
 
 // ---- Database (SQLite, persisted on disk) ----
 const db = createDb(path.join(root, process.env.DATABASE_PATH || 'talora.db'));
+svc.ensureSqliteTables(db); // Task 6: services table in the shared local db
 
 function handleContact(req, res) {
   let body = '';
@@ -121,6 +123,78 @@ async function handleContent(req, res, p) {
   return res.end(JSON.stringify({ success: false, message: 'Method not allowed.' }));
 }
 
+// ---- Task 6: admin services API (same auth + conventions as the content API) ----
+async function handleAdminServices(req, res, p) {
+  const m = /^\/api\/admin\/services(?:\/(.+))?$/.exec(p);
+  const id = m && m[1] ? m[1] : null;
+  const method = req.method;
+
+  if (!id && method === 'GET') {
+    if (!requireAuth(req, res)) return;
+    try {
+      const items = await svc.listServices(db, {}); // all statuses — CMS needs both
+      return sendJson(res, 200, { success: true, items });
+    } catch (err) {
+      console.error('GET /api/admin/services failed:', err.message);
+      return sendJson(res, 500, { success: false, message: 'Failed to load services. Please try again.' });
+    }
+  }
+
+  if (!id && method === 'POST') {
+    if (!requireAuth(req, res)) return;
+    return readBody(req, async (body) => {
+      const v = svc.validateService(body);
+      if (!v.ok) return sendJson(res, v.status, { success: false, message: v.message });
+      try {
+        const item = await svc.createService(db, v.fields);
+        return sendJson(res, 201, { success: true, message: 'Service created successfully.', item });
+      } catch (err) {
+        console.error('POST /api/admin/services failed:', err.message);
+        return sendJson(res, 500, { success: false, message: 'Failed to create service. Please try again.' });
+      }
+    });
+  }
+
+  if (id && (method === 'GET' || method === 'PUT' || method === 'PATCH' || method === 'DELETE')) {
+    if (!requireAuth(req, res)) return;
+    if (method === 'GET') {
+      try {
+        const item = await svc.getService(db, id);
+        if (!item) return sendJson(res, 404, { success: false, message: 'Service not found.' });
+        return sendJson(res, 200, { success: true, item });
+      } catch (err) {
+        console.error('GET /api/admin/services/:id failed:', err.message);
+        return sendJson(res, 500, { success: false, message: 'Failed to load service. Please try again.' });
+      }
+    }
+    if (method === 'PUT' || method === 'PATCH') {
+      return readBody(req, async (body) => {
+        const v = svc.validateService(body);
+        if (!v.ok) return sendJson(res, v.status, { success: false, message: v.message });
+        try {
+          const item = await svc.updateService(db, id, v.fields);
+          if (!item) return sendJson(res, 404, { success: false, message: 'Service not found.' });
+          return sendJson(res, 200, { success: true, message: 'Service updated successfully.', item });
+        } catch (err) {
+          console.error('PUT /api/admin/services/:id failed:', err.message);
+          return sendJson(res, 500, { success: false, message: 'Failed to update service. Please try again.' });
+        }
+      });
+    }
+    try {
+      const deleted = await svc.deleteService(db, id);
+      if (!deleted) return sendJson(res, 404, { success: false, message: 'Service not found.' });
+      return sendJson(res, 200, { success: true, message: 'Service deleted successfully.' });
+    } catch (err) {
+      console.error('DELETE /api/admin/services/:id failed:', err.message);
+      return sendJson(res, 500, { success: false, message: 'Failed to delete service. Please try again.' });
+    }
+  }
+
+  res.writeHead(405, { 'Content-Type': 'application/json', 'Allow': 'GET, POST, PUT, PATCH, DELETE' });
+  return res.end(JSON.stringify({ success: false, message: 'Method not allowed.' }));
+}
+
 async function handleRequest(req, res) {
   let p = decodeURIComponent(req.url.split('?')[0]);
 const q = Object.fromEntries(new URLSearchParams(req.url.split('?')[1] || ''));
@@ -195,6 +269,23 @@ const q = Object.fromEntries(new URLSearchParams(req.url.split('?')[1] || ''));
 
   if (p === '/api/content' || p.startsWith('/api/content/')) {
     return handleContent(req, res, p);
+  }
+  // ---- Task 6: services (public GET /api/services, admin CRUD under /api/admin/services) ----
+  if (p === '/api/services') {
+    if (req.method !== 'GET') {
+      res.writeHead(405, { 'Content-Type': 'application/json', 'Allow': 'GET' });
+      return res.end(JSON.stringify({ success: false, message: 'Method not allowed.' }));
+    }
+    try {
+      const items = await svc.listServices(db, { status: 'active' });
+      return sendJson(res, 200, { success: true, items });
+    } catch (err) {
+      console.error('GET /api/services failed:', err.message);
+      return sendJson(res, 500, { success: false, message: 'Failed to load services.' });
+    }
+  }
+  if (p === '/api/admin/services' || p.startsWith('/api/admin/services/')) {
+    return handleAdminServices(req, res, p);
   }
   // ---- Task 4: user authentication API ----
   if (p === '/api/auth/register' && req.method === 'POST') return uapi.register(req, res);
