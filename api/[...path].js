@@ -39,7 +39,11 @@ async function readBody(req, limit = 200000) {
 }
 
 function requestPath(req) {
-  return decodeURIComponent(new URL(req.url || '/', 'http://localhost').pathname || '/');
+  const url = new URL(req.url || '/', 'http://localhost');
+  if (url.pathname === '/api/[...path]') {
+    return '/api/' + (url.searchParams.get('path') || '');
+  }
+  return decodeURIComponent(url.pathname || '/');
 }
 
 function method(req) {
