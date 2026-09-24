@@ -27,6 +27,7 @@
                 <li><a href="#home" data-tc="nav_home">Home</a></li>
                 <li><a href="#studio" data-tc="nav_studio">Studio</a></li>
                 <li><a href="#build" data-tc="nav_build">Build With <span class="gradient">TALORA</span></a></li>
+                <li><a href="#services">Services</a></li>
                 <li><a href="#join" data-tc="nav_join">Join <span class="gradient">TALORA</span></a></li>
                 <li><a href="#contact" data-tc="nav_contact">Contact</a></li>
             </ul>
@@ -55,6 +56,7 @@
                 <li><a href="#home" data-tc="nav_home">Home</a></li>
                 <li><a href="#studio" data-tc="nav_studio">Studio</a></li>
                 <li><a href="#build" data-tc="nav_build">Build With <span class="gradient">TALORA</span></a></li>
+                <li><a href="#services">Services</a></li>
                 <li><a href="#join" data-tc="nav_join">Join <span class="gradient">TALORA</span></a></li>
                 <li><a href="#contact" data-tc="nav_contact">Contact</a></li>
             </ul>
@@ -206,6 +208,16 @@
                         </ul>
                     </article>
                 </div>
+            </div>
+        </section>
+
+        <!-- Services are loaded dynamically from the backend (GET /api/services) -->
+        <section class="build-section" id="services">
+            <h1 class="section-title autoDisplay">Our <span class="accent-color">Services</span></h1>
+            <p class="section-sub">What the <span class="gradient">TALORA</span> studio delivers for clients.</p>
+
+            <div class="services-grid" id="servicesGrid">
+                <div class="services-state" id="servicesLoading"><i class='bx bx-loader-alt bx-spin'></i> Loading services…</div>
             </div>
         </section>
 

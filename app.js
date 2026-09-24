@@ -486,3 +486,49 @@ window.addEventListener('load', playHero);
         }
     })();
 })();
+
+/* ============================================================
+   Services (Task 6) — loaded dynamically from the backend.
+   DATABASE -> GET /api/services -> this section.
+   No hardcoded service list: the database is the source of truth.
+   ============================================================ */
+(function () {
+    'use strict';
+
+    const grid = document.getElementById('servicesGrid');
+    if (!grid) return;
+
+    const esc = (s) => String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+    function showState(html) {
+        grid.innerHTML = '<div class="services-state">' + html + '</div>';
+    }
+
+    function renderServices(items) {
+        if (!items.length) {
+            showState('<i class=\'bx bx-package\'></i> No services are currently available.');
+            return;
+        }
+        grid.innerHTML = items.map(s => `
+            <article class="service-card">
+                <div class="cap-icon"><i class='bx ${esc(s.icon) || 'bx-customize'}'></i></div>
+                <h3>${esc(s.title)}</h3>
+                <p>${esc(s.description)}</p>
+            </article>`).join('');
+    }
+
+    (async function loadServices() {
+        showState('<i class=\'bx bx-loader-alt bx-spin\'></i> Loading services…');
+        try {
+            const res = await fetch('/api/services');
+            if (!res.ok) throw new Error('status ' + res.status);
+            const data = await res.json();
+            renderServices(Array.isArray(data.items) ? data.items : []);
+        } catch (_) {
+            // Never expose internal errors to visitors
+            showState('<i class=\'bx bx-cloud-lightning\'></i> Services are temporarily unavailable. Please try again later.');
+        }
+    })();
+})();

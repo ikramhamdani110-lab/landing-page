@@ -1534,3 +1534,72 @@ header h2 {
     .autoBlur, .autoDisplay { animation: none; opacity: 1; filter: none; transform: none; }
     * { scroll-behavior: auto !important; }
 }
+
+/* ============ Services section (Task 6) — loaded from GET /api/services ============ */
+.services-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.6rem;
+    max-width: 1200px;
+    margin: 3rem auto 0;
+    padding: 0 2rem;
+}
+
+.service-card {
+    padding: 2.2rem 2rem;
+    border-radius: 18px;
+    border: 1px solid rgba(114, 161, 222, 0.25);
+    background:
+        radial-gradient(120% 90% at 50% 0%, rgba(114, 161, 222, 0.10), transparent 55%),
+        linear-gradient(165deg, #0b0e1a 0%, #070713 100%);
+    box-shadow:
+        0 2px 4px rgba(0, 0, 0, 0.4),
+        0 12px 28px rgba(0, 0, 0, 0.55);
+    transition: transform 0.35s ease, border-color 0.35s ease;
+}
+
+.service-card:hover {
+    transform: translateY(-6px);
+    border-color: rgba(114, 161, 222, 0.55);
+}
+
+.service-card h3 {
+    font-size: 1.4rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin: 1.1rem 0 0.9rem;
+}
+
+.service-card p {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    line-height: 1.65;
+    margin: 0;
+}
+
+.services-state {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    padding: 2.5rem 1rem;
+    color: var(--text-secondary);
+    font-size: 1rem;
+    text-align: center;
+}
+
+.services-state i {
+    font-size: 1.4rem;
+    color: var(--primary-color);
+}
+
+@media (max-width: 768px) {
+    .services-grid {
+        grid-template-columns: 1fr;
+        padding: 0 1.2rem;
+    }
+    .service-card {
+        padding: 1.8rem 1.5rem;
+    }
+}

@@ -157,6 +157,44 @@
                     <tbody id="requestTableBody"></tbody>
                 </table>
             </div>
+
+            <!-- ============ Services (Task 6) ============ -->
+            <div class="cms-toolbar" style="margin-top:2.5rem">
+                <div class="toolbar-left">
+                    <h2>Services</h2>
+                    <span class="count-pill" id="serviceCountPill">0</span>
+                </div>
+                <button class="btn btn-primary" id="svcAddBtn"><i class='bx bx-plus'></i> Add Service</button>
+            </div>
+            <p class="toolbar-hint">Active services are shown publicly on the website. Changes go live immediately.</p>
+            <div class="alert hidden" id="serviceAlertBox" role="alert"></div>
+            <div class="table-state" id="serviceLoadingState">
+                <i class='bx bx-loader-alt bx-spin'></i> Loading services…
+            </div>
+            <div class="table-state hidden" id="serviceErrorState">
+                <i class='bx bx-error'></i> <span id="serviceErrorText">Something went wrong.</span>
+                <button class="btn btn-ghost" id="serviceRetryBtn">Retry</button>
+            </div>
+            <div class="table-state hidden" id="serviceEmptyState">
+                <i class='bx bx-package'></i> No services yet. Click “Add Service” to create the first one.
+            </div>
+            <div class="table-wrap hidden" id="serviceTableWrap">
+                <table class="content-table">
+                    <thead>
+                        <tr>
+                            <th>Service</th>
+                            <th>Icon</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Updated</th>
+                            <th class="th-actions">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="serviceTableBody"></tbody>
+                </table>
+                <!-- Mobile stacked cards -->
+                <div class="content-cards" id="serviceCards"></div>
+            </div>
         </main>
     </div>
 
@@ -234,6 +272,65 @@
                     <button type="submit" class="btn btn-primary" id="saveBtn">Save Content</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- ============ Service Add / Edit modal (Task 6) ============ -->
+    <div class="modal-overlay hidden" id="serviceModalOverlay">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="serviceModalTitle">
+            <div class="modal-head">
+                <h3 id="serviceModalTitle">Add Service</h3>
+                <button class="icon-btn" id="serviceModalClose" aria-label="Close"><i class='bx bx-x'></i></button>
+            </div>
+            <form id="serviceForm" novalidate>
+                <label class="field">
+                    <span>Title <em>*</em></span>
+                    <input type="text" id="sfTitle" maxlength="200" placeholder="e.g. Full-Stack Web Development">
+                    <small class="field-error" id="seTitle"></small>
+                </label>
+                <label class="field">
+                    <span>Description <em>*</em></span>
+                    <textarea id="sfDescription" rows="4" placeholder="Describe this service..."></textarea>
+                    <small class="field-error" id="seDescription"></small>
+                </label>
+                <div class="field-row">
+                    <label class="field">
+                        <span>Icon (Boxicons class)</span>
+                        <input type="text" id="sfIcon" maxlength="100" placeholder="e.g. bx-code-block">
+                        <small class="field-error" id="seIcon"></small>
+                    </label>
+                    <label class="field">
+                        <span>Status <em>*</em></span>
+                        <select id="sfStatus">
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                        <small class="field-error" id="seStatus"></small>
+                    </label>
+                </div>
+                <div class="form-message" id="serviceFormMessage" role="alert"></div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-ghost" id="serviceCancelBtn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="serviceSaveBtn">Save Service</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============ Service delete confirmation (Task 6) ============ -->
+    <div class="modal-overlay hidden" id="serviceDeleteOverlay">
+        <div class="modal modal-sm" role="alertdialog" aria-modal="true">
+            <div class="modal-head">
+                <h3>Delete Service</h3>
+                <button class="icon-btn" id="serviceDeleteClose" aria-label="Close"><i class='bx bx-x'></i></button>
+            </div>
+            <p class="delete-text">Are you sure you want to delete this service?</p>
+            <p class="delete-title" id="serviceDeleteTitle"></p>
+            <div class="form-message" id="serviceDeleteMessage" role="alert"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-ghost" id="serviceDeleteCancel">Cancel</button>
+                <button type="button" class="btn btn-danger" id="serviceDeleteConfirm">Delete</button>
+            </div>
         </div>
     </div>
 
