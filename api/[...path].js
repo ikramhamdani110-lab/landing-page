@@ -28,6 +28,11 @@ function getDb(key, createDb, pgConnectionString) {
 }
 
 async function readBody(req, limit = 200000) {
+  if (req.body !== undefined && req.body !== null) {
+    const body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+    if (body.length > limit) throw Object.assign(new Error('Request body is too large.'), { status: 413 });
+    return body;
+  }
   const chunks = [];
   let size = 0;
   for await (const chunk of req) {
