@@ -117,6 +117,46 @@
                 <!-- Mobile stacked cards -->
                 <div class="content-cards" id="contentCards"></div>
             </div>
+
+            <div class="cms-toolbar request-toolbar" style="margin-top:2.5rem">
+                <div class="toolbar-left">
+                    <h2>Customer Requests</h2>
+                    <span class="count-pill" id="requestCountPill">0</span>
+                </div>
+            </div>
+
+            <div class="cms-filters" id="requestFilters">
+                <div class="search-box">
+                    <i class='bx bx-search'></i>
+                    <input type="search" id="requestSearchInput" placeholder="Search customer requests...">
+                </div>
+                <select id="requestStatusFilter" aria-label="Filter requests by status">
+                    <option value="">All statuses</option>
+                    <option>NEW</option>
+                    <option>REVIEWING</option>
+                    <option>MATCHING</option>
+                    <option>IN_PROGRESS</option>
+                    <option>COMPLETED</option>
+                    <option>REJECTED</option>
+                </select>
+            </div>
+
+            <div class="table-wrap request-table-wrap">
+                <table class="content-table request-table">
+                    <thead>
+                        <tr>
+                            <th>Customer</th>
+                            <th>Category</th>
+                            <th>Title</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Updated</th>
+                            <th class="th-actions">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="requestTableBody"></tbody>
+                </table>
+            </div>
         </main>
     </div>
 
@@ -211,6 +251,31 @@
                 <button type="button" class="btn btn-ghost" id="deleteCancel">Cancel</button>
                 <button type="button" class="btn btn-danger" id="deleteConfirm">Delete</button>
             </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay hidden" id="requestModalOverlay">
+        <div class="modal modal-lg" role="dialog" aria-modal="true" aria-labelledby="requestModalTitle">
+            <div class="modal-head">
+                <h3 id="requestModalTitle">Request Details</h3>
+                <button class="icon-btn" id="requestModalClose" aria-label="Close"><i class='bx bx-x'></i></button>
+            </div>
+            <div id="requestDetailBody"></div>
+            <div class="request-status-bar">
+                <label class="field">
+                    <span>Update status</span>
+                    <select id="requestStatusSelect">
+                        <option>NEW</option>
+                        <option>REVIEWING</option>
+                        <option>MATCHING</option>
+                        <option>IN_PROGRESS</option>
+                        <option>COMPLETED</option>
+                        <option>REJECTED</option>
+                    </select>
+                </label>
+                <button id="requestStatusSave" class="btn btn-primary">Save Status</button>
+            </div>
+            <div class="form-message" id="requestStatusMessage" role="alert"></div>
         </div>
     </div>
 

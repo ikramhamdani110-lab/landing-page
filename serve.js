@@ -5,8 +5,10 @@ const { createDb, validateAndStore } = require('./contact-core');
 const cc = require('./content-core');
 const sc = require('./site-core');
 const uapi = require('./auth-user-api');
+const reqCore = require('./requests-core');
 const root = __dirname;
 const siteDb = sc.createDb(path.join(root, process.env.DATABASE_PATH || 'talora.db'));
+const requestDb = reqCore.createDb ? reqCore.createDb(path.join(root, process.env.DATABASE_PATH || 'talora.db')) : null;
 const mime = {'.html':'text/html','.css':'text/css','.js':'text/javascript','.png':'image/png','.jpg':'image/jpeg','.gif':'image/gif','.svg':'image/svg+xml','.mp4':'video/mp4','.webm':'video/webm','.ico':'image/x-icon'};
 
 // ---- Database (SQLite, persisted on disk) ----
@@ -22,6 +24,64 @@ function handleContact(req, res) {
     }
     return sendJson(res, result.status, { success: false, message: result.message });
   });
+}
+
+async function handleRequests(req, res, p) {
+  const method = req.method || 'GET';
+  const url = new URL(req.url, 'http://localhost');
+  const q = Object.fromEntries(url.searchParams.entries());
+  const matchId = /^\/api\/requests\/(\d+)$/.exec(p);
+  const statusMatch = /^\/api\/requests\/(\d+)\/status$/.exec(p);
+
+  if (p === '/api/requests' && method === 'POST') {
+    return readBody(req, async (body) => {
+      const result = await reqCore.createRequest(requestDb || db, body);
+      if (!result.ok) return sendJson(res, result.status || 500, { success: false, message: result.message || 'Unable to submit request.' });
+      return sendJson(res, 201, { success: true, message: 'Your request has been submitted successfully.', request: result });
+    });
+  }
+
+  if (p === '/api/requests' && method === 'GET') {
+    if (!requireAuth(req, res)) return;
+    try {
+      const data = await reqCore.listRequests(requestDb || db, {
+        status: q.status,
+        search: q.search,
+        sort: q.sort === 'updated' ? 'updated' : 'newest',
+        limit: q.limit || 25,
+        offset: q.offset || 0
+      });
+      return sendJson(res, 200, { success: true, items: data.items, total: data.total });
+    } catch (err) {
+      console.error('GET /api/requests failed:', err.message);
+      return sendJson(res, 500, { success: false, message: 'Failed to load requests.' });
+    }
+  }
+
+  if (matchId && method === 'GET') {
+    if (!requireAuth(req, res)) return;
+    try {
+      const item = await reqCore.getRequestById(requestDb || db, matchId[1]);
+      if (!item) return sendJson(res, 404, { success: false, message: 'Request not found.' });
+      return sendJson(res, 200, { success: true, request: item });
+    } catch (err) {
+      console.error('GET /api/requests/:id failed:', err.message);
+      return sendJson(res, 500, { success: false, message: 'Unable to load request details.' });
+    }
+  }
+
+  if (statusMatch && method === 'PATCH') {
+    if (!requireAuth(req, res)) return;
+    return readBody(req, async (body) => {
+      let parsed = {};
+      try { parsed = JSON.parse(body || '{}'); } catch { parsed = {}; }
+      const result = await reqCore.updateRequestStatus(requestDb || db, statusMatch[1], parsed.status);
+      if (!result.ok) return sendJson(res, result.status || 400, { success: false, message: result.message || 'Unable to update request status.' });
+      return sendJson(res, 200, { success: true, message: 'Request status updated.', request: result });
+    });
+  }
+
+  return sendJson(res, 404, { success: false, message: 'Request route not found.' });
 }
 
 function sendJson(res, status, obj) {
@@ -195,6 +255,9 @@ const q = Object.fromEntries(new URLSearchParams(req.url.split('?')[1] || ''));
 
   if (p === '/api/content' || p.startsWith('/api/content/')) {
     return handleContent(req, res, p);
+  }
+  if (p === '/api/requests' || p.startsWith('/api/requests/')) {
+    return handleRequests(req, res, p);
   }
   // ---- Task 4: user authentication API ----
   if (p === '/api/auth/register' && req.method === 'POST') return uapi.register(req, res);

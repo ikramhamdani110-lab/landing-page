@@ -277,6 +277,77 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 let isSubmitting = false;
 let toastTimer = null;
 
+const requestForm = document.getElementById('request-form');
+const requestFeedback = document.getElementById('requestFeedback');
+const requestSubmitBtn = document.getElementById('requestSubmitBtn');
+let isRequestSubmitting = false;
+
+function setRequestFeedback(type, message) {
+    if (!requestFeedback) return;
+    requestFeedback.textContent = message || '';
+    requestFeedback.className = 'request-feedback' + (type ? ' ' + type : '');
+}
+
+requestForm && requestForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (isRequestSubmitting) return;
+
+    const payload = {
+        fullName: document.getElementById('requestFullName')?.value.trim() || '',
+        email: document.getElementById('requestEmail')?.value.trim() || '',
+        companyName: document.getElementById('requestCompany')?.value.trim() || '',
+        category: document.getElementById('requestCategory')?.value.trim() || '',
+        title: document.getElementById('requestTitle')?.value.trim() || '',
+        description: document.getElementById('requestDescription')?.value.trim() || '',
+        budget: document.getElementById('requestBudget')?.value.trim() || '',
+        deadline: document.getElementById('requestDeadline')?.value.trim() || '',
+        additionalDetails: document.getElementById('requestAdditionalDetails')?.value.trim() || ''
+    };
+
+    if (!payload.fullName || !payload.email || !payload.category || !payload.title || !payload.description) {
+        setRequestFeedback('error', 'Please complete all required fields, including your name, email, category, title, and description.');
+        return;
+    }
+    if (!EMAIL_RE.test(payload.email)) {
+        setRequestFeedback('error', 'Please enter a valid email address.');
+        return;
+    }
+
+    isRequestSubmitting = true;
+    if (requestSubmitBtn) {
+        requestSubmitBtn.disabled = true;
+        requestSubmitBtn.innerHTML = '<span>Submitting...</span>';
+    }
+    setRequestFeedback('', '');
+
+    try {
+        const res = await fetch('/api/requests', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (res.ok && data.success) {
+            requestForm.reset();
+            setRequestFeedback('success', 'Request submitted successfully. TALORA will review it and get back to you soon.');
+            showToast(true, 'Request Received', 'Your request has been submitted successfully and is now in our review queue.');
+        } else {
+            setRequestFeedback('error', data.message || 'Unable to submit your request right now. Please try again.');
+            showToast(false, 'Request not submitted', data.message || 'Please check your details and try again.');
+        }
+    } catch {
+        setRequestFeedback('error', 'A network issue prevented your request from being submitted. Please try again.');
+        showToast(false, 'Request not submitted', 'A network issue occurred. Please try again in a moment.');
+    } finally {
+        isRequestSubmitting = false;
+        if (requestSubmitBtn) {
+            requestSubmitBtn.disabled = false;
+            requestSubmitBtn.innerHTML = '<span>Submit Request</span>';
+        }
+    }
+});
+
 function showToast(success, title, text) {
     toastTitle.textContent = title;
     toastText.textContent = text;

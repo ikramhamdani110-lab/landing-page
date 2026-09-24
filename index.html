@@ -320,6 +320,69 @@
             </div>
         </section>
 
+        <section class="request-section" id="request-section">
+            <div class="request-header">
+                <p class="request-kicker">Project Request</p>
+                <h2>Tell us about your next opportunity</h2>
+            </div>
+
+            <form class="request-form" id="request-form" novalidate>
+                <div class="request-grid">
+                    <label class="request-field">
+                        <span>Full name</span>
+                        <input type="text" id="requestFullName" name="fullName" placeholder="Your full name" required>
+                    </label>
+                    <label class="request-field">
+                        <span>Email</span>
+                        <input type="email" id="requestEmail" name="email" placeholder="you@example.com" required>
+                    </label>
+                    <label class="request-field request-field-wide">
+                        <span>Company / Organization</span>
+                        <input type="text" id="requestCompany" name="companyName" placeholder="Optional">
+                    </label>
+                    <label class="request-field">
+                        <span>Service category</span>
+                        <select id="requestCategory" name="category" required>
+                            <option value="">Select a category</option>
+                            <option>Design</option>
+                            <option>Web Development</option>
+                            <option>Software / Engineering</option>
+                            <option>Creative Technology</option>
+                            <option>Strategy</option>
+                            <option>Other</option>
+                        </select>
+                    </label>
+                    <label class="request-field request-field-wide">
+                        <span>Project title</span>
+                        <input type="text" id="requestTitle" name="title" placeholder="e.g. Website redesign" required>
+                    </label>
+                    <label class="request-field request-field-wide">
+                        <span>Project description</span>
+                        <textarea id="requestDescription" name="description" rows="5" placeholder="Describe the problem, goals, audience, and current challenges." required></textarea>
+                    </label>
+                    <label class="request-field">
+                        <span>Budget</span>
+                        <input type="text" id="requestBudget" name="budget" placeholder="Optional">
+                    </label>
+                    <label class="request-field">
+                        <span>Desired deadline</span>
+                        <input type="text" id="requestDeadline" name="deadline" placeholder="Optional">
+                    </label>
+                    <label class="request-field request-field-wide">
+                        <span>Additional details</span>
+                        <textarea id="requestAdditionalDetails" name="additionalDetails" rows="4" placeholder="Anything else TALORA should know?"></textarea>
+                    </label>
+                </div>
+
+                <div class="request-form-actions">
+                    <button type="submit" class="request-submit" id="requestSubmitBtn">
+                        <span>Submit Request</span>
+                    </button>
+                </div>
+                <p class="request-feedback" id="requestFeedback" aria-live="polite"></p>
+            </form>
+        </section>
+
         <footer class="footer-simple">
             <p data-tc="footer_text">© 2025 <span class="gradient">TALORA</span>. A premium ecosystem connecting clients with skilled people.</p>
         </footer>

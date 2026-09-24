@@ -21,6 +21,8 @@
   let editingId = null;   // null => create, string => edit
   let deletingId = null;
   let filters = { search: '', category: '', status: '', section: '' };
+  let requestRows = [];
+  let activeRequestId = null;
 
   // ---------- auth helpers ----------
   const getToken = () => sessionStorage.getItem(TOKEN_KEY) || '';
@@ -90,6 +92,7 @@
     $('cmsView').classList.remove('hidden');
     if (user && user.username) $('adminName').textContent = user.username;
     loadContent();
+    loadRequests();
     loadSiteContent();
   }
 
@@ -367,8 +370,113 @@
   });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { closeModal(); closeDelete(); }
+    if (e.key === 'Escape') { closeModal(); closeDelete(); closeRequestModal(); }
   });
+
+  async function loadRequests() {
+    try {
+      const params = new URLSearchParams();
+      const search = ($('requestSearchInput') || {}).value?.trim() || '';
+      const status = ($('requestStatusFilter') || {}).value || '';
+      if (search) params.set('search', search);
+      if (status) params.set('status', status);
+      const data = await api('/api/requests' + (params.toString() ? '?' + params.toString() : ''));
+      requestRows = Array.isArray(data.items) ? data.items : [];
+      const count = $('requestCountPill');
+      if (count) count.textContent = String(data.total || requestRows.length || 0);
+      renderRequests();
+    } catch (err) {
+      if (err.status === 401) { setToken(''); showLogin(); return; }
+      showAlert('error', err.message || 'Failed to load customer requests.');
+    }
+  }
+
+  function renderRequests() {
+    const tbody = $('requestTableBody');
+    if (!tbody) return;
+    if (!requestRows.length) {
+      tbody.innerHTML = `<tr><td colspan="7" class="empty-request-state">No requests match the current filters.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = requestRows.map((item) => `
+      <tr>
+        <td>
+          <div class="cell-title">${escapeHtml(item.customerName || 'Unknown')}</div>
+          <div class="cell-desc">${escapeHtml(item.customerEmail || '—')}</div>
+        </td>
+        <td><span class="category-tag">${escapeHtml(item.category || 'Other')}</span></td>
+        <td><div class="cell-title">${escapeHtml(item.title || 'Untitled request')}</div></td>
+        <td><span class="status-badge ${escapeHtml(item.status || 'NEW')}">${escapeHtml(item.status || 'NEW')}</span></td>
+        <td class="cell-date">${fmtDate(item.createdAt)}</td>
+        <td class="cell-date">${fmtDate(item.updatedAt)}</td>
+        <td class="td-actions"><button class="btn btn-ghost btn-sm" data-request-id="${escapeHtml(item.id)}" data-request-view="1">View</button></td>
+      </tr>`).join('');
+  }
+
+  async function openRequestDetails(id) {
+    const modal = $('requestModalOverlay');
+    const detailBody = $('requestDetailBody');
+    const statusSelect = $('requestStatusSelect');
+    const msg = $('requestStatusMessage');
+    if (!modal || !detailBody || !statusSelect) return;
+    activeRequestId = id;
+    detailBody.innerHTML = '<div class="table-state"><span class="spinner"></span> Loading request...</div>';
+    modal.classList.remove('hidden');
+    try {
+      const data = await api('/api/requests/' + id);
+      const request = data.request || data.item || {};
+      detailBody.innerHTML = `
+        <div class="request-detail-grid">
+          <div class="request-detail-item"><span class="label">Project title</span><span class="value">${escapeHtml(request.title || '—')}</span></div>
+          <div class="request-detail-item"><span class="label">Customer</span><span class="value">${escapeHtml(request.customerName || '—')}</span></div>
+          <div class="request-detail-item"><span class="label">Email</span><span class="value">${escapeHtml(request.customerEmail || '—')}</span></div>
+          <div class="request-detail-item"><span class="label">Company</span><span class="value">${escapeHtml(request.companyName || '—')}</span></div>
+          <div class="request-detail-item"><span class="label">Category</span><span class="value">${escapeHtml(request.category || '—')}</span></div>
+          <div class="request-detail-item"><span class="label">Status</span><span class="value">${escapeHtml(request.status || 'NEW')}</span></div>
+          <div class="request-detail-item full"><span class="label">Description</span><span class="value">${escapeHtml(request.description || '—')}</span></div>
+          <div class="request-detail-item"><span class="label">Budget</span><span class="value">${escapeHtml(request.budget || '—')}</span></div>
+          <div class="request-detail-item"><span class="label">Deadline</span><span class="value">${escapeHtml(request.deadline || '—')}</span></div>
+          <div class="request-detail-item full"><span class="label">Additional details</span><span class="value">${escapeHtml(request.additionalDetails || '—')}</span></div>
+          <div class="request-detail-item"><span class="label">Created</span><span class="value">${fmtDate(request.createdAt)}</span></div>
+          <div class="request-detail-item"><span class="label">Last updated</span><span class="value">${fmtDate(request.updatedAt)}</span></div>
+        </div>`;
+      statusSelect.value = request.status || 'NEW';
+      showFormMessage(msg, 'info', '');
+    } catch (err) {
+      detailBody.innerHTML = `<div class="table-state"><i class='bx bx-error'></i> ${escapeHtml(err.message || 'Unable to load the request.')}</div>`;
+    }
+  }
+
+  function closeRequestModal() {
+    const modal = $('requestModalOverlay');
+    if (modal) modal.classList.add('hidden');
+    activeRequestId = null;
+    showFormMessage($('requestStatusMessage'), 'info', '');
+  }
+
+  async function updateRequestStatusFromModal() {
+    if (!activeRequestId) return;
+    const msg = $('requestStatusMessage');
+    const status = $('requestStatusSelect')?.value || 'NEW';
+    const btn = $('requestStatusSave');
+    if (btn) btn.disabled = true;
+    showFormMessage(msg, 'info', '');
+    try {
+      const data = await api('/api/requests/' + activeRequestId + '/status', { method: 'PATCH', body: JSON.stringify({ status }) });
+      showFormMessage(msg, 'success', data.message || 'Status updated successfully.');
+      await loadRequests();
+      const row = requestRows.find(r => String(r.id) === String(activeRequestId));
+      if (row) {
+        row.status = status;
+        row.updatedAt = new Date().toISOString();
+      }
+      await openRequestDetails(activeRequestId);
+    } catch (err) {
+      showFormMessage(msg, 'error', err.message || 'Failed to update status.');
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
 
   // ---------- boot ----------
   initAuth();
@@ -482,7 +590,19 @@
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-site-section]');
     if (btn) openSiteSection(btn.dataset.siteSection);
+    const reqBtn = e.target.closest('[data-request-view]');
+    if (reqBtn) openRequestDetails(reqBtn.dataset.requestId);
   });
+
+  $('requestSearchInput') && $('requestSearchInput').addEventListener('input', (e) => {
+    clearTimeout(loadRequests._t);
+    loadRequests._t = setTimeout(() => loadRequests(), 250);
+  });
+
+  $('requestStatusFilter') && $('requestStatusFilter').addEventListener('change', () => loadRequests());
+  $('requestModalClose') && $('requestModalClose').addEventListener('click', closeRequestModal);
+  $('requestStatusSave') && $('requestStatusSave').addEventListener('click', updateRequestStatusFromModal);
+  $('requestModalOverlay') && $('requestModalOverlay').addEventListener('click', (e) => { if (e.target === $('requestModalOverlay')) closeRequestModal(); });
 
   // Load the website content map when signed in (enterCms calls loadSiteContent)
 })();

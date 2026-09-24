@@ -15,7 +15,7 @@
     var editMessage = $('editMessage');
 
     function getToken() { try { return sessionStorage.getItem(TOKEN_KEY); } catch (_) { return null; } }
-    function clearToken() { try { sessionStorage.removeItem(TOKEN_KEY); } catch (_) {} }
+    function clearToken() { try { sessionStorage.removeItem(TOKEN_KEY); } catch (_) { } }
     function goToLogin() {
         clearToken();
         window.location.replace('login.html');
