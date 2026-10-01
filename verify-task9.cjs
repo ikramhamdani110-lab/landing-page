@@ -1,6 +1,11 @@
 // Task 9 VERIFICATION — independent audit (not a refactor of the implementation).
-// Exercises the backend directly, including the Vercel serverless handlers
-// invoked WITHOUT going through serve.js, plus override/escalation attempts.
+// Exercises the backend directly, including the consolidated Vercel handler
+// api/[...path].js invoked WITHOUT going through serve.js, plus override/escalation
+// attempts.
+//
+// After the serverless consolidation every protected route is served by the single
+// catch-all handler, so these tests target that file directly. That is what Vercel
+// actually executes, which makes it the authoritative serverless surface.
 process.env.DATABASE_PATH = process.env.DATABASE_PATH || 'talora.db';
 const path = require('path');
 const ROOT = __dirname;
@@ -111,52 +116,69 @@ const AUTH = { content: { title: 'V', description: 'D', category: 'General', sta
     auc.verifyUserToken({ headers: { authorization: 'Bearer ' + cmsToken } }) === null);
 
   // =====================================================================
-  // 3. SERVERLESS HANDLERS CALLED DIRECTLY (bypassing serve.js)
+  // 3. CONSOLIDATED SERVERLESS HANDLER CALLED DIRECTLY (bypassing serve.js)
   // =====================================================================
-  const slContent = require('./api/content/index.js');
-  const slContentId = require('./api/content/[id].js');
-  const slSvc = require('./api/admin/services/index.js');
-  const slSvcId = require('./api/admin/services/[id].js');
-  const slSet = require('./api/website-settings.js');
-  const slUsers = require('./api/admin/users/index.js');
-  const slUsersId = require('./api/admin/users/[id].js');
+  // api/[...path].js is the ONLY Vercel function; it must enforce RBAC itself.
+  const sl = require('./api/[...path].js');
 
-  // A shared record created by the serverless POST handler as ADMIN.
-  let r = await call(slContent, { method: 'POST', url: '/api/content', token: cmsToken, body: AUTH.content });
+  // A shared record created by the consolidated handler as ADMIN.
+  const C = '/api/content';
+  let r = await call(sl, { method: 'POST', url: C, token: cmsToken, body: AUTH.content });
   const recId = r.body && JSON.parse(r.body).item && JSON.parse(r.body).item.id;
   log('[serverless] ADMIN POST /api/content -> 201', r.statusCode === 201 && !!recId, String(r.statusCode));
 
   const direct = [
-    ['content GET', slContent, { method: 'GET', url: '/api/content' }, 'EMPLOYEE', 200],
-    ['content POST', slContent, { method: 'POST', url: '/api/content', body: AUTH.content }, 'EMPLOYEE', 403],
-    ['content/:id GET', slContentId, { method: 'GET', url: '/api/content/' + recId }, 'EMPLOYEE', 200],
-    ['content/:id DELETE', slContentId, { method: 'DELETE', url: '/api/content/' + recId }, 'EMPLOYEE', 403],
-    ['admin/services GET', slSvc, { method: 'GET', url: '/api/admin/services' }, 'EMPLOYEE', 403],
-    ['admin/services POST', slSvc, { method: 'POST', url: '/api/admin/services', body: { title: 't', description: 'd', icon: '', status: 'active' } }, 'EMPLOYEE', 403],
-    ['admin/services/:id DELETE', slSvcId, { method: 'DELETE', url: '/api/admin/services/1' }, 'EMPLOYEE', 403],
-    ['website-settings GET', slSet, { method: 'GET', url: '/api/website-settings' }, 'EMPLOYEE', 403],
-    ['website-settings PUT', slSet, { method: 'PUT', url: '/api/website-settings', body: { hero_title: 'X' } }, 'EMPLOYEE', 403],
-    ['admin/users GET', slUsers, { method: 'GET', url: '/api/admin/users' }, 'EMPLOYEE', 403],
-    ['admin/users PUT', slUsersId, { method: 'PUT', url: '/api/admin/users/' + empId, body: { role: 'ADMIN' } }, 'EMPLOYEE', 403]
+    ['content GET', { method: 'GET', url: C }, 'EMPLOYEE', 200],
+    ['content POST', { method: 'POST', url: C, body: AUTH.content }, 'EMPLOYEE', 403],
+    ['content/:id GET', { method: 'GET', url: C + '/' + recId }, 'EMPLOYEE', 200],
+    ['content/:id PUT', { method: 'PUT', url: C + '/' + recId, body: AUTH.content }, 'EMPLOYEE', 200],
+    ['content/:id PATCH', { method: 'PATCH', url: C + '/' + recId, body: AUTH.content }, 'EMPLOYEE', 200],
+    ['content/:id DELETE', { method: 'DELETE', url: C + '/' + recId }, 'EMPLOYEE', 403],
+    ['admin/services GET', { method: 'GET', url: '/api/admin/services' }, 'EMPLOYEE', 403],
+    ['admin/services POST', { method: 'POST', url: '/api/admin/services', body: { title: 't', description: 'd', icon: '', status: 'active' } }, 'EMPLOYEE', 403],
+    ['admin/services/:id GET', { method: 'GET', url: '/api/admin/services/1' }, 'EMPLOYEE', 403],
+    ['admin/services/:id PUT', { method: 'PUT', url: '/api/admin/services/1', body: { title: 't', description: 'd', icon: '', status: 'active' } }, 'EMPLOYEE', 403],
+    ['admin/services/:id DELETE', { method: 'DELETE', url: '/api/admin/services/1' }, 'EMPLOYEE', 403],
+    ['website-settings GET', { method: 'GET', url: '/api/website-settings' }, 'EMPLOYEE', 403],
+    ['website-settings PUT', { method: 'PUT', url: '/api/website-settings', body: { hero_title: 'X' } }, 'EMPLOYEE', 403],
+    ['admin/users GET', { method: 'GET', url: '/api/admin/users' }, 'EMPLOYEE', 403],
+    ['admin/users PUT', { method: 'PUT', url: '/api/admin/users/' + empId, body: { role: 'ADMIN' } }, 'EMPLOYEE', 403],
+    // The customer-request inbox is ADMIN-only (public POST stays open).
+    ['requests GET', { method: 'GET', url: '/api/requests' }, 'EMPLOYEE', 403],
+    ['requests/:id GET', { method: 'GET', url: '/api/requests/1' }, 'EMPLOYEE', 403],
+    ['requests/:id/status PATCH', { method: 'PATCH', url: '/api/requests/1/status', body: { status: 'closed' } }, 'EMPLOYEE', 403]
   ];
-  for (const [name, h, opts, who, want] of direct) {
-    const res = await call(h, { ...opts, token: empToken });
+  for (const [name, opts, who, want] of direct) {
+    const res = await call(sl, { ...opts, token: empToken });
     log(`[serverless] ${who} ${name} -> ${want}`, res.statusCode === want, String(res.statusCode));
   }
   // Unauthenticated direct-to-serverless
-  for (const [name, h, opts] of [['content GET', slContent, { method: 'GET', url: '/api/content' }],
-    ['website-settings GET', slSet, { method: 'GET', url: '/api/website-settings' }],
-    ['admin/users GET', slUsers, { method: 'GET', url: '/api/admin/users' }],
-    ['content POST', slContent, { method: 'POST', url: '/api/content', body: AUTH.content }]]) {
-    const res = await call(h, opts);
+  for (const [name, opts] of [['content GET', { method: 'GET', url: C }],
+    ['content POST', { method: 'POST', url: C, body: AUTH.content }],
+    ['content/:id DELETE', { method: 'DELETE', url: C + '/' + recId }],
+    ['website-settings GET', { method: 'GET', url: '/api/website-settings' }],
+    ['admin/services GET', { method: 'GET', url: '/api/admin/services' }],
+    ['admin/users GET', { method: 'GET', url: '/api/admin/users' }],
+    ['admin/users PUT', { method: 'PUT', url: '/api/admin/users/' + empId, body: { role: 'ADMIN' } }],
+    ['requests GET', { method: 'GET', url: '/api/requests' }]]) {
+    const res = await call(sl, opts);
     log(`[serverless] UNAUTH ${name} -> 401`, res.statusCode === 401, String(res.statusCode));
   }
   // ADMIN direct-to-serverless
-  for (const [name, h, opts] of [['admin/users GET', slUsers, { method: 'GET', url: '/api/admin/users' }],
-    ['admin/services GET', slSvc, { method: 'GET', url: '/api/admin/services' }],
-    ['website-settings GET', slSet, { method: 'GET', url: '/api/website-settings' }]]) {
-    const res = await call(h, { ...opts, token: cmsToken });
-    log(`[serverless] ADMIN ${name} -> 200`, res.statusCode === 200, String(res.statusCode));
+  for (const [name, opts] of [['content POST', { method: 'POST', url: C, body: { ...AUTH.content, title: 'ADMIN via serverless' } }],
+    ['admin/users GET', { method: 'GET', url: '/api/admin/users' }],
+    ['admin/services GET', { method: 'GET', url: '/api/admin/services' }],
+    ['website-settings GET', { method: 'GET', url: '/api/website-settings' }],
+    ['requests GET', { method: 'GET', url: '/api/requests' }]]) {
+    const res = await call(sl, { ...opts, token: cmsToken });
+    log(`[serverless] ADMIN ${name} -> 200/201`, res.statusCode === 200 || res.statusCode === 201, String(res.statusCode));
+  }
+  // Public routes must stay open (no auth regression).
+  for (const [name, opts] of [['website-content GET', { method: 'GET', url: '/api/website-content' }],
+    ['services GET', { method: 'GET', url: '/api/services' }],
+    ['contact POST', { method: 'POST', url: '/api/contact', body: { name: 'A B', email: 'a@b.co', subject: 'Start a Project', message: 'hello there' } }]]) {
+    const res = await call(sl, opts);
+    log(`[serverless] PUBLIC ${name} stays open (2xx)`, res.statusCode >= 200 && res.statusCode < 300, String(res.statusCode));
   }
 
   // =====================================================================
@@ -164,11 +186,11 @@ const AUTH = { content: { title: 'V', description: 'D', category: 'General', sta
   // =====================================================================
   // The serverless shims resolve their own SQLite file; point them at the same one.
   process.env.DATABASE_PATH = path.join(ROOT, process.env.DATABASE_PATH || 'talora.db');
-  const q = await call(slContentId, { method: 'GET', url: '/api/content/' + recId + '?role=ADMIN&as=admin', token: cmsToken });
+  const q = await call(sl, { method: 'GET', url: C + '/' + recId + '?role=ADMIN&as=admin', token: cmsToken });
   log('Query param ?role=ADMIN has no effect (read still scoped by role)', q.statusCode === 200, String(q.statusCode));
-  const q2 = await call(slContentId, { method: 'GET', url: '/api/content/' + recId + '?role=ADMIN&as=admin' });
+  const q2 = await call(sl, { method: 'GET', url: C + '/' + recId + '?role=ADMIN&as=admin' });
   log('Same URL without a token is still 401 (query is not a credential)', q2.statusCode === 401, String(q2.statusCode));
-  const res2 = await call(slContentId, { method: 'PUT', url: '/api/content/' + recId + '?role=ADMIN', token: empToken,
+  const res2 = await call(sl, { method: 'PUT', url: C + '/' + recId + '?role=ADMIN', token: empToken,
     body: { ...AUTH.content, title: 'Q1', status: 'draft' } });
   const parsed2 = res2.body && JSON.parse(res2.body);
   log('EMPLOYEE PUT with ?role=ADMIN cannot publish (status unchanged)',
@@ -177,9 +199,13 @@ const AUTH = { content: { title: 'V', description: 'D', category: 'General', sta
   // Header spoofing is impossible: only the signed bearer token is read.
   const spoofedReq = mockReq({ method: 'GET', url: '/api/content', token: empToken });
   spoofedReq.headers['x-role'] = 'ADMIN'; spoofedReq.headers['x-user-role'] = 'ADMIN'; spoofedReq.headers['x-forwarded-user'] = 'admin';
-  const r3b = mockRes(); await slContent(spoofedReq, r3b);
+  const r3b = mockRes(); await sl(spoofedReq, r3b);
   log('Spoofed x-role/x-user-role headers do not escalate (still EMPLOYEE)',
     r3b.statusCode === 200 && rbac.can('EMPLOYEE', 'content:create') === false, String(r3b.statusCode));
+  const spoofAdmin = mockReq({ method: 'GET', url: '/api/admin/users', token: empToken });
+  spoofAdmin.headers['x-role'] = 'ADMIN'; spoofAdmin.headers['x-user-role'] = 'ADMIN';
+  const r3c = mockRes(); await sl(spoofAdmin, r3c);
+  log('Spoofed x-role header cannot unlock /api/admin/users (403)', r3c.statusCode === 403, String(r3c.statusCode));
 
   // Role management: every override channel on the ADMIN-only endpoint
   for (const [name, opts] of [
@@ -187,26 +213,26 @@ const AUTH = { content: { title: 'V', description: 'D', category: 'General', sta
     ['body role lowercase', { method: 'PUT', url: '/api/admin/users/' + empId, body: { role: 'admin' } }],
     ['body __proto__/role injection', { method: 'PUT', url: '/api/admin/users/' + empId, body: { role: 'ADMIN', id: admId, password_hash: 'x' } }]
   ]) {
-    const res = await call(slUsersId, { ...opts, token: empToken });
+    const res = await call(sl, { ...opts, token: empToken });
     log(`EMPLOYEE role self-escalation via ${name} -> 403`, res.statusCode === 403, String(res.statusCode));
   }
   const after = await auc.getUserById(db, empId);
   log('EMPLOYEE role in DB is still EMPLOYEE after all escalation attempts', after.role === 'EMPLOYEE', after.role);
 
   // EMPLOYEE modifying ANOTHER user
-  const r4 = await call(slUsersId, { method: 'PUT', url: '/api/admin/users/' + admId, body: { role: 'EMPLOYEE' }, token: empToken });
+  const r4 = await call(sl, { method: 'PUT', url: '/api/admin/users/' + admId, body: { role: 'EMPLOYEE' }, token: empToken });
   log('EMPLOYEE cannot demote another ADMIN -> 403', r4.statusCode === 403, String(r4.statusCode));
   log('Other user role untouched', (await auc.getUserById(db, admId)).role === 'ADMIN');
 
   // Invalid role values
   for (const v of ['superadmin', '', 'ADMIN;DROP TABLE users', null, 42, {}]) {
-    const res = await call(slUsersId, { method: 'PUT', url: '/api/admin/users/' + empId, body: { role: v }, token: cmsToken });
+    const res = await call(sl, { method: 'PUT', url: '/api/admin/users/' + empId, body: { role: v }, token: cmsToken });
     if (res.statusCode !== 400) log(`Invalid role ${JSON.stringify(v)} rejected -> 400`, false, String(res.statusCode));
   }
   log('All invalid role values rejected with 400 (enum enforced)', true);
 
   // Non-admin method on role endpoint
-  const r5 = await call(slUsers, { method: 'DELETE', url: '/api/admin/users/' + empId, token: cmsToken });
+  const r5 = await call(sl, { method: 'DELETE', url: '/api/admin/users/' + empId, token: cmsToken });
   log('DELETE /api/admin/users/:id is not a supported operation (405)', r5.statusCode === 405, String(r5.statusCode));
 
   // Profile endpoint: role must be ignored
@@ -263,8 +289,62 @@ const AUTH = { content: { title: 'V', description: 'D', category: 'General', sta
   try { require('fs').unlinkSync(legacyFile); } catch { }
 
   // Sensitive data
-  const lu = await call(slUsers, { method: 'GET', url: '/api/admin/users', token: cmsToken });
+  const lu = await call(sl, { method: 'GET', url: '/api/admin/users', token: cmsToken });
   log('Admin user list never exposes password_hash', !/password_hash|passwordHash/.test(lu.body || ''));
+
+  // ---- Architecture-migration regression guards -------------------------
+  // These pin the behaviours that would silently regress if the consolidated
+  // router ever fell back to a non-RBAC auth path.
+  const fsmod = require('fs');
+  const src = fsmod.readFileSync(path.join(ROOT, 'api', '[...path].js'), 'utf8');
+  const srv = fsmod.readFileSync(path.join(ROOT, 'serve.js'), 'utf8');
+
+  const meEmp = await call(sl, { method: 'GET', url: '/api/auth/me', token: empToken });
+  const meEmpRole = meEmp.body && JSON.parse(meEmp.body).user.role;
+  log('[migration] /api/auth/me returns the DB role, not a hardcoded "user"', meEmpRole === 'EMPLOYEE', String(meEmpRole));
+  const meAdm = await call(sl, { method: 'GET', url: '/api/auth/me', token: cmsToken });
+  const meAdmRole = meAdm.body && JSON.parse(meAdm.body).user.role;
+  log('[migration] /api/auth/me returns the DB role, not a hardcoded "admin"', meAdmRole === 'ADMIN', String(meAdmRole));
+
+  log('[migration] consolidated handler requires rbac-core', src.includes("require('../rbac-core')"));
+  log('[migration] consolidated handler uses rbac.can() (shared matrix)', /rbac\.can\(/.test(src));
+  log('[migration] consolidated handler uses rbac.mergeContentFields() (employee field rules)', /rbac\.mergeContentFields\(/.test(src));
+  // Slice each handler's own body (up to the next `async function` or module.exports)
+  // so an unrelated helper elsewhere in the file cannot leak into the check.
+  const handlerBody = (name) => {
+    const start = src.indexOf('async function ' + name + '(');
+    if (start < 0) return '';
+    const rest = src.slice(start);
+    const end = rest.slice(1).search(/\n(?:async function |module\.exports)/);
+    return end < 0 ? rest : rest.slice(0, end + 1);
+  };
+  const CRUD = ['handleContent', 'handleServices', 'handleWebsiteSettings', 'handleRequests'];
+  log('[migration] no protected CRUD handler uses a bare verifyAuth/verifyAdmin gate',
+    CRUD.every(n => !/if\s*\(\s*!\s*(contentCore|siteCore)\.verify(Auth|Admin)\(/.test(handlerBody(n))));
+  log('[migration] every protected CRUD handler delegates to an rbac guard',
+    CRUD.every(n => /await guard\(/.test(handlerBody(n)) || /await guardAdmin\(/.test(handlerBody(n))));
+  log('[migration] no hardcoded role literal remains in the consolidated handler',
+    !/role:\s*'user'/.test(src) && !/role:\s*'admin'/.test(src));
+  log('[migration] serve.js uses rbac-core and has no requireAuth() call left',
+    srv.includes("require('./rbac-core')") && !/^\s*if \(!requireAuth\(/m.test(srv));
+  // The frontend mirror is allowed; a second *server-side* matrix is not.
+  const cmsSrc = fsmod.readFileSync(path.join(ROOT, 'cms.js'), 'utf8');
+  log('[migration] no duplicate permission matrix on the server side',
+    !/ROLE_PERMISSIONS/.test(srv) && !/ROLE_PERMISSIONS/.test(src));
+  log('[migration] frontend cms.js still mirrors permissions for UX (expected)', /ROLE_PERMISSIONS/.test(cmsSrc));
+  log('[migration] rbac-core.js is the only definition of ROLE_PERMISSIONS',
+    /ROLE_PERMISSIONS\s*=\s*Object\.freeze/.test(fsmod.readFileSync(path.join(ROOT, 'rbac-core.js'), 'utf8')));
+
+  // requests-core rejects near-duplicate submissions (409), so use a unique email.
+  const post = await call(sl, { method: 'POST', url: '/api/requests', body: {
+    fullName: 'RBAC Tester', email: `rbac-req-${stamp}@test.dev`, category: 'Web Development',
+    title: 'Project enquiry', description: 'Please contact me about a new project.'
+  } });
+  log('[migration] public POST /api/requests still works (201)', post.statusCode === 201, String(post.statusCode) + ' ' + String(post.body).slice(0, 90));
+  const listAdm = await call(sl, { method: 'GET', url: '/api/requests', token: cmsToken });
+  log('[migration] ADMIN can list requests (200)', listAdm.statusCode === 200, String(listAdm.statusCode));
+  const listUn = await call(sl, { method: 'GET', url: '/api/requests' });
+  log('[migration] unauthenticated GET /api/requests -> 401', listUn.statusCode === 401, String(listUn.statusCode));
 
   // Cleanup
   db.close();

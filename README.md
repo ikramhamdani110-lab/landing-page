@@ -134,8 +134,8 @@ Unchanged from before — RBAC reuses it, it does not replace it:
 
 ## Where authorization happens
 
-`rbac-core.js` exposes the reusable guards used by **both** `serve.js` (local) and
-`api/*.js` (Vercel):
+`rbac-core.js` exposes the reusable guards used by **both** the local server
+(`serve.js`) and the consolidated Vercel function (`api/[...path].js`):
 
 - `getPrincipal(req)` — resolves the caller from the request: the admin token maps
   to `ADMIN`; a user token maps to the role stored in the **database row**. The
@@ -145,6 +145,10 @@ Unchanged from before — RBAC reuses it, it does not replace it:
 - `requireRole(req, res, 'ADMIN')` — 403 unless the principal's role matches.
 - `requirePermission(req, res, 'content:delete')` — 403 unless the role holds it.
 - `restrictContentFields(fields, role)` / `mergeContentFields(...)` — field-level enforcement.
+
+There is exactly **one** permission matrix (`ROLE_PERMISSIONS` in `rbac-core.js`).
+`api/[...path].js` adds only thin `guard()` / `guardAdmin()` wrappers around these
+primitives, so the local and serverless deployments cannot drift apart.
 
 ## Protected endpoints
 
@@ -162,10 +166,12 @@ Unchanged from before — RBAC reuses it, it does not replace it:
 | `PUT\|PATCH /api/website-settings` | `settings:update` | 403 |
 | `GET /api/admin/users` | `users:read` | 403 |
 | `PUT /api/admin/users/:id` | `users:manage` | 403 |
+| `GET /api/requests`, `GET /api/requests/:id`, `PATCH /api/requests/:id/status` | ADMIN only (`requireRole`) | 403 |
 | `GET\|PUT /api/user/profile` | own account only | 200 |
 
 Public and unchanged: `POST /api/contact`, `GET /api/website-content`,
-`GET /api/services`, `POST /api/auth/register`, `POST /api/auth/user-login`,
+`GET /api/services`, `POST /api/requests` (customer request submission),
+`POST /api/auth/register`, `POST /api/auth/user-login`,
 `POST /api/auth/logout`, `GET /api/auth/me`.
 
 ## 401 vs 403
@@ -190,17 +196,29 @@ passwords come from `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` /
 
 ## How RBAC was tested
 
-`test-rbac-e2e.mjs` drives the real HTTP API (no browser), so the backend is
-proven authoritative:
+`test-rbac-e2e.mjs` and `verify-task9.cjs` drive the real HTTP API (no browser),
+so the backend is proven authoritative:
 
 ```bash
 node serve.js
 node test-rbac-e2e.mjs
+node verify-task9.cjs
 ```
 
-35 assertions covering: unauthenticated access → 401; ADMIN create / read / update /
+`verify-task9.cjs` additionally invokes the consolidated Vercel function
+`api/[...path].js` **directly**, bypassing `serve.js` entirely, so the code Vercel
+actually executes is verified too.
+
+Assertions cover: unauthenticated access → 401; ADMIN create / read / update /
 delete; EMPLOYEE read and permitted update, with `status` proven unchanged;
-EMPLOYEE create / delete / settings / user-management → 403; employee self-escalation
-through `PUT /api/user/profile` and `PUT /api/admin/users/:id` blocked; invalid role
-values rejected with 400; and no password hash in any response.
+EMPLOYEE create / delete / settings / services / requests / user-management → 403;
+employee self-escalation through `PUT /api/user/profile` and
+`PUT /api/admin/users/:id` blocked; invalid role values rejected with 400; no
+password hash in any response; and architecture-migration guards that assert
+`/api/auth/me` returns the database role, the consolidated handler delegates to
+`rbac-core`, no hardcoded role literal survives, and no duplicate permission
+matrix exists outside `rbac-core.js`.
+
+`test-requests-local.mjs` confirms the customer request feature still works and
+that its inbox is ADMIN-only.
 

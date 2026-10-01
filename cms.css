@@ -197,6 +197,15 @@ select option { background: #0a0d1f; color: var(--text-color); }
 }
 .status-badge.published { color: #7ee2ac; border: 1px solid rgba(48, 164, 108, 0.5); background: rgba(48, 164, 108, 0.1); }
 .status-badge.draft { color: var(--warning); border: 1px solid rgba(245, 165, 36, 0.45); background: rgba(245, 165, 36, 0.08); }
+.status-badge.NEW, .status-badge.REVIEWING, .status-badge.MATCHING, .status-badge.IN_PROGRESS, .status-badge.COMPLETED, .status-badge.REJECTED {
+    border: 1px solid var(--border); background: rgba(114, 161, 222, 0.08); color: #fff;
+}
+.status-badge.NEW { background: rgba(114, 161, 222, 0.12); }
+.status-badge.REVIEWING { background: rgba(245, 165, 36, 0.1); color: #ffd27d; }
+.status-badge.MATCHING { background: rgba(167, 139, 250, 0.12); color: #d9c7ff; }
+.status-badge.IN_PROGRESS { background: rgba(59, 130, 246, 0.12); color: #a8d3ff; }
+.status-badge.COMPLETED { background: rgba(16, 185, 129, 0.12); color: #9ae6b4; }
+.status-badge.REJECTED { background: rgba(239, 68, 68, 0.12); color: #fca5a5; }
 .category-tag { color: var(--primary-color); border: 1px solid var(--border); background: rgba(114, 161, 222, 0.08); }
 
 .action-btn {
@@ -278,3 +287,14 @@ select option { background: #0a0d1f; color: var(--text-color); }
 .modal-hint { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem; }
 .field-help { display: block; color: var(--text-secondary); font-size: 0.74rem; margin-top: 0.25rem; }
 .type-hint { font-size: 0.68rem; letter-spacing: 0.08em; color: var(--primary-color); font-style: normal; }
+
+.request-toolbar { margin-bottom: 0.7rem; }
+.request-table-wrap { margin-top: 0.5rem; }
+.request-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem 1rem; }
+.request-detail-item { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 10px; padding: 0.8rem 0.9rem; }
+.request-detail-item.full { grid-column: 1 / -1; }
+.request-detail-item .label { display: block; color: var(--text-secondary); font-size: 0.73rem; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.2rem; }
+.request-detail-item .value { color: #fff; font-weight: 600; line-height: 1.5; }
+.request-status-bar { display: flex; align-items: end; gap: 1rem; margin-top: 1rem; }
+.request-status-bar .field { flex: 1; margin-bottom: 0; }
+

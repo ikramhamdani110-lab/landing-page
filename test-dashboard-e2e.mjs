@@ -10,7 +10,7 @@ async function req(method, path, body, token) {
     body: body ? JSON.stringify(body) : undefined
   });
   let data = null;
-  try { data = await res.json(); } catch {}
+  try { data = await res.json(); } catch { }
   return { status: res.status, data };
 }
 
