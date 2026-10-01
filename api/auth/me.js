@@ -11,15 +11,15 @@ module.exports = async (req, res) => {
     res.setHeader('Allow', 'GET');
     return status(405), json({ success: false, message: 'Method not allowed.' });
   }
-  // Try a normal user token first.
+  // Try a normal user token first. Task 9: report the real DB role, not a hardcoded value.
   const user = await getUserFromRequest(req);
   if (user) {
     status(200);
-    return json({ success: true, user: { id: user.id, fullName: user.full_name, email: user.email, role: 'user' } });
+    return json({ success: true, user: { id: user.id, fullName: user.fullName, email: user.email, role: user.role } });
   }
   if (!verifyAuth(req)) {
     return status(401), json({ success: false, message: 'You are not authorized to perform this action.' });
   }
   status(200);
-  return json({ success: true, user: { username: adminCredentials().username, role: 'admin' } });
+  return json({ success: true, user: { username: adminCredentials().username, role: 'ADMIN' } });
 };

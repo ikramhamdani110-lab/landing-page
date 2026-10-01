@@ -6,6 +6,7 @@ const cc = require('./content-core');
 const sc = require('./site-core');
 const svc = require('./services-core');
 const uapi = require('./auth-user-api');
+const rbac = require('./rbac-core');
 const root = __dirname;
 const siteDb = sc.createDb(path.join(root, process.env.DATABASE_PATH || 'talora.db'));
 const mime = {'.html':'text/html','.css':'text/css','.js':'text/javascript','.png':'image/png','.jpg':'image/jpeg','.gif':'image/gif','.svg':'image/svg+xml','.mp4':'video/mp4','.webm':'video/webm','.ico':'image/x-icon'};
@@ -38,12 +39,22 @@ function readBody(req, cb) {
   req.on('end', () => cb(body));
 }
 
-function requireAuth(req, res) {
-  if (!cc.verifyAuth(req)) {
+// Task 9 (RBAC): the single authorization gate for the whole local server.
+//   401 -> no valid session at all
+//   403 -> valid session, but the role lacks `permission`
+// Replaces the old boolean requireAuth() so roles are checked in one place
+// instead of being duplicated inside each route.
+async function requirePermission(req, res, permission) {
+  const principal = await rbac.getPrincipal(req);
+  if (!principal) {
     sendJson(res, 401, { success: false, message: 'You are not authorized to perform this action.' });
-    return false;
+    return null;
   }
-  return true;
+  if (!rbac.can(principal.role, permission)) {
+    sendJson(res, 403, { success: false, message: 'You do not have permission to perform this action.' });
+    return null;
+  }
+  return principal;
 }
 
 // Content id from /api/content/<id>
@@ -58,7 +69,7 @@ async function handleContent(req, res, p) {
   const q = Object.fromEntries(new URLSearchParams(req.url.split('?')[1] || ''));
 
   if (!id && method === 'GET') {
-    if (!requireAuth(req, res)) return;
+    if (!await requirePermission(req, res, rbac.PERMISSIONS.CONTENT_READ)) return;
     try {
       const items = await cc.listContent(db, { category: q.category, status: q.status, search: q.search, section: q.section });
       return sendJson(res, 200, { success: true, items });
@@ -69,7 +80,7 @@ async function handleContent(req, res, p) {
   }
 
   if (!id && method === 'POST') {
-    if (!requireAuth(req, res)) return;
+    if (!await requirePermission(req, res, rbac.PERMISSIONS.CONTENT_CREATE)) return;
     return readBody(req, async (body) => {
       const v = cc.validateContent(body);
       if (!v.ok) return sendJson(res, v.status, { success: false, message: v.message });
@@ -84,7 +95,10 @@ async function handleContent(req, res, p) {
   }
 
   if (id && (method === 'GET' || method === 'PUT' || method === 'PATCH' || method === 'DELETE')) {
-    if (!requireAuth(req, res)) return;
+    const permission = method === 'GET' ? rbac.PERMISSIONS.CONTENT_READ
+      : (method === 'DELETE' ? rbac.PERMISSIONS.CONTENT_DELETE : rbac.PERMISSIONS.CONTENT_UPDATE);
+    const principal = await requirePermission(req, res, permission);
+    if (!principal) return;
     if (method === 'GET') {
       try {
         const item = await cc.getContent(db, id);
@@ -100,7 +114,7 @@ async function handleContent(req, res, p) {
         const v = cc.validateContent(body);
         if (!v.ok) return sendJson(res, v.status, { success: false, message: v.message });
         try {
-          const item = await cc.updateContent(db, id, v.fields);
+          const item = await cc.updateContent(db, id, rbac.mergeContentFields(await cc.getContent(db, id), v.fields, principal.role));
           if (!item) return sendJson(res, 404, { success: false, message: 'Content not found.' });
           return sendJson(res, 200, { success: true, message: 'Content updated successfully.', item });
         } catch (err) {
@@ -130,7 +144,7 @@ async function handleAdminServices(req, res, p) {
   const method = req.method;
 
   if (!id && method === 'GET') {
-    if (!requireAuth(req, res)) return;
+    if (!await requirePermission(req, res, rbac.PERMISSIONS.SERVICES_READ)) return;
     try {
       const items = await svc.listServices(db, {}); // all statuses — CMS needs both
       return sendJson(res, 200, { success: true, items });
@@ -141,7 +155,7 @@ async function handleAdminServices(req, res, p) {
   }
 
   if (!id && method === 'POST') {
-    if (!requireAuth(req, res)) return;
+    if (!await requirePermission(req, res, rbac.PERMISSIONS.SERVICES_CREATE)) return;
     return readBody(req, async (body) => {
       const v = svc.validateService(body);
       if (!v.ok) return sendJson(res, v.status, { success: false, message: v.message });
@@ -156,7 +170,9 @@ async function handleAdminServices(req, res, p) {
   }
 
   if (id && (method === 'GET' || method === 'PUT' || method === 'PATCH' || method === 'DELETE')) {
-    if (!requireAuth(req, res)) return;
+    const permission = method === 'GET' ? rbac.PERMISSIONS.SERVICES_READ
+      : (method === 'DELETE' ? rbac.PERMISSIONS.SERVICES_DELETE : rbac.PERMISSIONS.SERVICES_UPDATE);
+    if (!await requirePermission(req, res, permission)) return;
     if (method === 'GET') {
       try {
         const item = await svc.getService(db, id);
@@ -238,9 +254,7 @@ const q = Object.fromEntries(new URLSearchParams(req.url.split('?')[1] || ''));
 
   // Admin-only website-content settings (full map incl. defaults + section metadata)
   if (p === '/api/website-settings') {
-    if (!sc.verifyAdmin(req)) {
-      return sendJson(res, 401, { success: false, message: 'You are not authorized to perform this action.' });
-    }
+    if (!await requirePermission(req, res, req.method === 'GET' ? rbac.PERMISSIONS.SETTINGS_READ : rbac.PERMISSIONS.SETTINGS_UPDATE)) return;
     if (req.method === 'GET') {
       try {
         const values = await sc.getSettings(siteDb);
@@ -292,6 +306,8 @@ const q = Object.fromEntries(new URLSearchParams(req.url.split('?')[1] || ''));
   if (p === '/api/auth/user-login' && req.method === 'POST') return uapi.login(req, res);
   if (p === '/api/auth/logout' && req.method === 'POST') return uapi.logout(req, res);
   if (p === '/api/user/profile' && (req.method === 'GET' || req.method === 'PUT')) return uapi.profile(req, res);
+  // ---- Task 9: RBAC user/role management (ADMIN only; 403 for EMPLOYEE) ----
+  if (p === '/api/admin/users' || p.startsWith('/api/admin/users/')) return uapi.adminUsers(req, res);
   if (p === '/') p = '/index.html';
   if (p === '/dashboard') p = '/dashboard.html';
   const file = path.join(root, p);

@@ -1,7 +1,8 @@
 // Vercel serverless: /api/admin/services (admin token required)
 //   GET  /api/admin/services — list ALL services (active + inactive, for the CMS)
 //   POST /api/admin/services — create a service
-const { pgConnectionString, verifyAuth, listServices, createService, validateService } = require('../../../services-core');
+const { pgConnectionString, listServices, createService, validateService } = require('../../../services-core');
+const rbac = require('../../../rbac-core');
 
 let sqliteDb = null;
 function getDb() {
@@ -12,7 +13,13 @@ function getDb() {
   return sqliteDb;
 }
 
-const unauthorized = (status, json) => { status(401); json({ success: false, message: 'You are not authorized to perform this action.' }); };
+// Task 9 (RBAC): 401 unauthenticated, 403 role lacks the permission.
+const guard = async (req, res, permission) => {
+  const principal = await rbac.getPrincipal(req);
+  if (!principal) { rbac.unauthorized(res, 'cms'); return null; }
+  if (!rbac.can(principal.role, permission)) { rbac.forbidden(res, 'cms'); return null; }
+  return principal;
+};
 
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
@@ -20,7 +27,7 @@ module.exports = async (req, res) => {
   const json = (o) => (typeof res.json === 'function' ? res.json(o) : res.end(JSON.stringify(o)));
 
   if (req.method === 'GET') {
-    if (!verifyAuth(req)) return unauthorized(status, json);
+    if (!await guard(req, res, rbac.PERMISSIONS.SERVICES_READ)) return;
     const q = new URLSearchParams(req.url.split('?')[1] || '');
     try {
       const items = await listServices(getDb(), { status: q.get('status') || undefined });
@@ -32,7 +39,7 @@ module.exports = async (req, res) => {
   }
 
   if (req.method === 'POST') {
-    if (!verifyAuth(req)) return unauthorized(status, json);
+    if (!await guard(req, res, rbac.PERMISSIONS.SERVICES_CREATE)) return;
     let body = '';
     req.on('data', c => { body += c; if (body.length > 2e5) req.destroy(); });
     req.on('end', async () => {

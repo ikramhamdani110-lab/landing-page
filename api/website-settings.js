@@ -1,7 +1,8 @@
 // Vercel serverless: /api/website-settings
 //   GET — admin-only: full website content map + section metadata
 //   PUT / PATCH — admin-only: save website content changes (auth required)
-const { pgConnectionString, getSettings, saveSettings, SECTIONS, DEFAULTS, verifyAdmin } = require('../site-core');
+const { pgConnectionString, getSettings, saveSettings, SECTIONS, DEFAULTS } = require('../site-core');
+const rbac = require('../rbac-core');
 
 let sqliteDb = null;
 function getDb() {
@@ -17,9 +18,11 @@ module.exports = async (req, res) => {
   const status = (c) => (typeof res.status === 'function' ? res.status(c) : (res.statusCode = c, res));
   const json = (o) => (typeof res.json === 'function' ? res.json(o) : res.end(JSON.stringify(o)));
 
-  const unauthorized = () => { status(401); return json({ success: false, message: 'You are not authorized to perform this action.' }); };
-
-  if (!verifyAdmin(req)) return unauthorized();
+  // Task 9 (RBAC): 401 unauthenticated, 403 for an authenticated non-admin.
+  const permission = req.method === 'GET' ? rbac.PERMISSIONS.SETTINGS_READ : rbac.PERMISSIONS.SETTINGS_UPDATE;
+  const principal = await rbac.getPrincipal(req);
+  if (!principal) { rbac.unauthorized(res, 'cms'); return; }
+  if (!rbac.can(principal.role, permission)) { rbac.forbidden(res, 'cms'); return; }
 
   if (req.method === 'GET') {
     try {

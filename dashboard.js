@@ -34,6 +34,13 @@
         return s || '—';
     }
 
+    // Task 9 (RBAC): the role is rendered from the server response, never from
+    // local storage, so the UI can never claim a privilege the API won't grant.
+    function roleLabel(v) {
+        var r = String(v || '').toUpperCase();
+        return r === 'ADMIN' ? 'ADMIN' : 'EMPLOYEE';
+    }
+
     var currentUser = null;
 
     function renderUser(u) {
@@ -43,7 +50,7 @@
         $('pEmail').textContent = u.email || '—';
         $('pSince').textContent = formatDate(u.createdAt);
         $('pSignupType').textContent = signupTypeLabel(u.signupType);
-        $('pRole').textContent = u.role || 'user';
+        $('pRole').textContent = roleLabel(u.role);
     }
 
     // ---- Initial load: GET /api/user/profile with the bearer token ----

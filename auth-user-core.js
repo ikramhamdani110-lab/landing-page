@@ -15,6 +15,10 @@ const crypto = require('crypto');
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const USER_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
+// Task 9 (RBAC): the role is a closed enum, never a free-form string.
+const { ROLES, ROLE_VALUES, normalizeRole, normalizeRoleForStorage } = require('./rbac-core');
+const SQL_ROLE_ENUM = `'${ROLE_VALUES.join("', '")}'`;
+
 // ---------- Database ----------
 function pgConnectionString() {
   return process.env.DATABASE_URL || process.env.POSTGRES_URL || null;
@@ -29,15 +33,49 @@ function createDb(dbFile) {
     full_name TEXT NOT NULL,
     email TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'user',
-    signup_type TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-  )`);
+      role TEXT NOT NULL DEFAULT 'EMPLOYEE' CHECK (role IN (${SQL_ROLE_ENUM})),
+      signup_type TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`);
     // Migration for pre-existing local SQLite databases created before signup_type existed
-  const _cols = db.prepare(`PRAGMA table_info(users)`).all().map(c => c.name);
-  if (!_cols.includes('signup_type')) { db.exec(`ALTER TABLE users ADD COLUMN signup_type TEXT`); }
-  db.exec(`CREATE TABLE IF NOT EXISTS revoked_tokens (
+    const _cols = db.prepare(`PRAGMA table_info(users)`).all().map(c => c.name);
+    if (!_cols.includes('signup_type')) { db.exec(`ALTER TABLE users ADD COLUMN signup_type TEXT`); }
+    // Task 9: map legacy 'user' roles onto EMPLOYEE, then enforce the enum.
+    db.exec(`UPDATE users SET role = 'EMPLOYEE' WHERE role IS NULL OR lower(role) = 'user'`);
+    db.exec(`UPDATE users SET role = 'EMPLOYEE' WHERE role NOT IN (${SQL_ROLE_ENUM})`);
+    // `CREATE TABLE IF NOT EXISTS` is a no-op on a table created before Task 9, so
+    // such a database has no CHECK constraint and would accept any role string.
+    // Detect that and rebuild the table once so the enum is enforced at the DB level.
+    try {
+      const sql = db.prepare(`SELECT sql FROM sqlite_master WHERE type='table' AND name='users'`).get().sql || '';
+      if (!/CHECK\s*\(\s*role\s+IN/i.test(sql)) {
+        db.exec('PRAGMA foreign_keys = OFF');
+        db.exec('BEGIN');
+        db.exec(`CREATE TABLE users_rbac_migrated (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          full_name TEXT NOT NULL,
+          email TEXT NOT NULL UNIQUE,
+          password_hash TEXT NOT NULL,
+          role TEXT NOT NULL DEFAULT 'EMPLOYEE' CHECK (role IN (${SQL_ROLE_ENUM})),
+          signup_type TEXT,
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )`);
+        db.exec(`INSERT INTO users_rbac_migrated (id, full_name, email, password_hash, role, signup_type, created_at, updated_at)
+          SELECT id, full_name, email, password_hash,
+            CASE WHEN role IN (${SQL_ROLE_ENUM}) THEN role ELSE 'EMPLOYEE' END,
+            signup_type, created_at, updated_at
+          FROM users`);
+        db.exec('DROP TABLE users');
+        db.exec('ALTER TABLE users_rbac_migrated RENAME TO users');
+        db.exec('COMMIT');
+      }
+    } catch (e) {
+      try { db.exec('ROLLBACK'); } catch { /* no transaction open */ }
+      console.error('users role constraint migration failed:', e.message);
+    }
+    db.exec(`CREATE TABLE IF NOT EXISTS revoked_tokens (
     token_hash TEXT PRIMARY KEY,
     expires_at INTEGER NOT NULL
   )`);
@@ -59,7 +97,7 @@ async function ensurePgTable() {
     full_name TEXT NOT NULL,
     email TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'user',
+    role TEXT NOT NULL DEFAULT 'EMPLOYEE',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
   )`);
@@ -68,6 +106,13 @@ async function ensurePgTable() {
     expires_at BIGINT NOT NULL
   )`);
   await getPool().query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS signup_type TEXT NOT NULL DEFAULT 'project'`);
+  // Task 9: closed enum + migrate the legacy 'user' role value.
+  try {
+    await getPool().query(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check`);
+    await getPool().query(`ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN (${SQL_ROLE_ENUM}))`);
+  } catch (e) { console.error('role constraint:', e.message); }
+  await getPool().query(`UPDATE users SET role = 'EMPLOYEE' WHERE role IS NULL OR lower(role) = 'user'`);
+  await getPool().query(`UPDATE users SET role = 'EMPLOYEE' WHERE role NOT IN (${SQL_ROLE_ENUM})`);
 }
 
 // Safe public shape — NEVER includes password_hash
@@ -77,7 +122,8 @@ function shapeUser(r) {
     fullName: r.full_name,
     email: r.email,
     signupType: r.signup_type || 'project',
-    role: r.role,
+    // Always a known enum value; unknown/legacy data degrades to EMPLOYEE.
+    role: normalizeRole(r.role) || ROLES.EMPLOYEE,
     createdAt: r.created_at ? new Date(r.created_at).toISOString() : null
   };
 }
@@ -144,7 +190,9 @@ async function registerUser(db, body) {
   if (!v.ok) return v;
   const { fullName, email, password } = v.fields;
   const signupType = body && body.signupType === 'talent' ? 'talent' : 'project';
-  const passwordHash = hashPassword(password); // role is NOT taken from the request — always 'user'
+  const passwordHash = hashPassword(password);
+  // role is NOT taken from the request — new self-service accounts are always EMPLOYEE.
+  const role = ROLES.EMPLOYEE;
 
   try {
     if (pgConnectionString()) {
@@ -152,14 +200,14 @@ async function registerUser(db, body) {
       const dup = await getPool().query('SELECT id FROM users WHERE email = $1', [email]);
       if (dup.rows.length) return { ok: false, status: 409, message: 'An account with this email already exists.', field: 'email' };
       const res = await getPool()
-        .query("INSERT INTO users (full_name, email, password_hash, role, signup_type) VALUES ($1, $2, $3, 'user', $4) RETURNING *",
-          [fullName, email, passwordHash, signupType]);
+        .query('INSERT INTO users (full_name, email, password_hash, role, signup_type) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+          [fullName, email, passwordHash, role, signupType]);
       return { ok: true, user: shapeUser(res.rows[0]) };
     }
     const dup = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
     if (dup) return { ok: false, status: 409, message: 'An account with this email already exists.', field: 'email' };
-    const info = db.prepare("INSERT INTO users (full_name, email, password_hash, role, signup_type) VALUES (?, ?, ?, 'user', ?)")
-      .run(fullName, email, passwordHash, signupType);
+    const info = db.prepare('INSERT INTO users (full_name, email, password_hash, role, signup_type) VALUES (?, ?, ?, ?, ?)')
+      .run(fullName, email, passwordHash, role, signupType);
     const row = db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
     return { ok: true, user: shapeUser(row) };
   } catch (err) {
@@ -212,6 +260,7 @@ async function updateUserProfile(db, userId, body) {
     return { ok: false, status: 400, message: 'Invalid request body.' };
   }
   // Ignore anything that is not an allowed field — including id, role, password etc.
+  // (role is admin-managed only, via the RBAC user-management endpoints.)
   const fullName = typeof (data.fullName ?? data.full_name) === 'string' ? (data.fullName ?? data.full_name).trim() : undefined;
   const email = typeof data.email === 'string' ? data.email.trim().toLowerCase() : undefined;
 
@@ -256,6 +305,57 @@ async function updateUserProfile(db, userId, body) {
   } catch (err) {
     if (String(err.message).includes('UNIQUE') || err.code === '23505') {
       return { ok: false, status: 409, message: 'An account with this email already exists.', field: 'email' };
+    }
+    throw err;
+  }
+}
+
+// ---------- User management (Task 9 / RBAC, ADMIN-only) ----------
+// Never returns password_hash. List is for the admin CMS only.
+async function listUsers(db, { role } = {}) {
+  if (pgConnectionString()) {
+    await ensurePgTable();
+    const params = []; let sql = 'SELECT * FROM users';
+    if (role) { params.push(role); sql += ` WHERE role = $${params.length}`; }
+    sql += ' ORDER BY id ASC';
+    const res = await getPool().query(sql, params);
+    return res.rows.map(shapeUser);
+  }
+  let sql = 'SELECT * FROM users'; const params = [];
+  if (role) { sql += ' WHERE role = ?'; params.push(role); }
+  sql += ' ORDER BY id ASC';
+  return db.prepare(sql).all(...params).map(shapeUser);
+}
+
+// Change a user's role. Caller must be an authenticated ADMIN (enforced in
+// auth-user-api.js / serve.js) — there is no self-service path to this function.
+// Returns { ok: true, user } or { ok: false, status, message }
+async function updateUserRole(db, targetId, body) {
+  let data;
+  try { data = typeof body === 'string' ? JSON.parse(body || '{}') : (body || {}); } catch { data = null; }
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    return { ok: false, status: 400, message: 'Invalid request body.' };
+  }
+  const role = normalizeRole(data.role);
+  if (!role) {
+    return { ok: false, status: 400, message: 'Role must be one of: ' + ROLE_VALUES.join(', ') + '.' };
+  }
+  const id = Number(targetId);
+  if (!Number.isInteger(id) || id <= 0) return { ok: false, status: 400, message: 'Invalid user id.' };
+
+  try {
+    if (pgConnectionString()) {
+      await ensurePgTable();
+      const res = await getPool().query('UPDATE users SET role = $1, updated_at = now() WHERE id = $2 RETURNING *', [role, id]);
+      if (!res.rows.length) return { ok: false, status: 404, message: 'Account not found.' };
+      return { ok: true, user: shapeUser(res.rows[0]) };
+    }
+    const info = db.prepare("UPDATE users SET role = ?, updated_at = datetime('now') WHERE id = ?").run(role, id);
+    if (!info.changes) return { ok: false, status: 404, message: 'Account not found.' };
+    return { ok: true, user: shapeUser(db.prepare('SELECT * FROM users WHERE id = ?').get(id)) };
+  } catch (err) {
+    if (String(err.message).includes('UNIQUE') || err.code === '23505') {
+      return { ok: false, status: 409, message: 'Unable to update role.' };
     }
     throw err;
   }
@@ -394,8 +494,9 @@ function clientIp(req) {
 }
 
 module.exports = {
-  pgConnectionString, createDb,
+  ROLES, pgConnectionString, createDb,
   validateRegistration, registerUser, loginUser, updateUserProfile,
+  listUsers, updateUserRole, normalizeRoleForStorage,
   hashPassword, verifyPassword,
   issueUserToken, verifyUserToken, getUserById, getUserFromRequest,
   extractBearer, revokeUserToken, isUserTokenRevoked,

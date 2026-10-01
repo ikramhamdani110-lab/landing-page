@@ -3,7 +3,8 @@
 //   PUT    — update a service
 //   PATCH  — update a service
 //   DELETE — delete a service
-const { pgConnectionString, verifyAuth, getService, updateService, deleteService, validateService } = require('../../../services-core');
+const { pgConnectionString, getService, updateService, deleteService, validateService } = require('../../../services-core');
+const rbac = require('../../../rbac-core');
 
 let sqliteDb = null;
 function getDb() {
@@ -14,7 +15,13 @@ function getDb() {
   return sqliteDb;
 }
 
-const unauthorized = (status, json) => { status(401); json({ success: false, message: 'You are not authorized to perform this action.' }); };
+// Task 9 (RBAC): 401 unauthenticated, 403 role lacks the permission.
+const guard = async (req, res, permission) => {
+  const principal = await rbac.getPrincipal(req);
+  if (!principal) { rbac.unauthorized(res, 'cms'); return null; }
+  if (!rbac.can(principal.role, permission)) { rbac.forbidden(res, 'cms'); return null; }
+  return principal;
+};
 
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
@@ -25,7 +32,7 @@ module.exports = async (req, res) => {
   const id = m ? decodeURIComponent(m[1]) : null;
 
   if (req.method === 'GET') {
-    if (!verifyAuth(req)) return unauthorized(status, json);
+    if (!await guard(req, res, rbac.PERMISSIONS.SERVICES_READ)) return;
     try {
       const item = await getService(getDb(), id);
       if (!item) return status(404), json({ success: false, message: 'Service not found.' });
@@ -37,7 +44,7 @@ module.exports = async (req, res) => {
   }
 
   if (req.method === 'PUT' || req.method === 'PATCH') {
-    if (!verifyAuth(req)) return unauthorized(status, json);
+    if (!await guard(req, res, rbac.PERMISSIONS.SERVICES_UPDATE)) return;
     let body = '';
     req.on('data', c => { body += c; if (body.length > 2e5) req.destroy(); });
     req.on('end', async () => {
@@ -56,7 +63,7 @@ module.exports = async (req, res) => {
   }
 
   if (req.method === 'DELETE') {
-    if (!verifyAuth(req)) return unauthorized(status, json);
+    if (!await guard(req, res, rbac.PERMISSIONS.SERVICES_DELETE)) return;
     try {
       const deleted = await deleteService(getDb(), id);
       if (!deleted) return status(404), json({ success: false, message: 'Service not found.' });

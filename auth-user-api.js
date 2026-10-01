@@ -4,6 +4,7 @@
 
 const cc = require('./content-core');
 const auc = require('./auth-user-core');
+const rbac = require('./rbac-core');
 
 function json(res, status, obj) {
   res.statusCode = status;
@@ -72,6 +73,8 @@ async function profile(req, res) {
   try {
     const db = cc.createDb(withDbPath(req));
     try {
+      // Identity always comes from the signed user token. An admin token (or any
+      // other credential) is not a registered user, so it is rejected with 401.
       const payload = auc.verifyUserToken(req);
       if (!payload || await auc.isUserTokenRevoked(db, auc.extractBearer(req))) {
         return json(res, 401, { error: 'Unauthorized.' });
@@ -134,4 +137,41 @@ async function me(req, res) {
   }
 }
 
-module.exports = { register, login, profile, logout, me };
+// GET  /api/admin/users  — list accounts with their roles (ADMIN only)
+// PUT  /api/admin/users/:id — change an account's role (ADMIN only)
+// The caller is never taken from the request: an EMPLOYEE always receives 403,
+// and no endpoint lets a user modify their OWN role.
+async function adminUsers(req, res) {
+  const method = (req.method || 'GET').toUpperCase();
+  const rawUrl = (req.url || '').split('?')[0];
+  const m = /^\/api\/admin\/users\/(.+)$/.exec(rawUrl);
+  const id = m ? decodeURIComponent(m[1]) : null;
+
+  // Only GET (list) and PUT (change role) are supported. Anything else is 405.
+  if (method !== 'GET' && method !== 'PUT') return json(res, 405, { error: 'Method not allowed.' });
+  if (method === 'GET' && id) return json(res, 405, { error: 'Method not allowed.' });
+  if (method === 'PUT' && !id) return json(res, 405, { error: 'Method not allowed.' });
+
+  try {
+    const db = cc.createDb(withDbPath(req));
+    try {
+      // RBAC: 401 without a session, 403 for an authenticated non-admin.
+      const principal = await rbac.requireRole(req, res, rbac.ROLES.ADMIN, { db });
+      if (!principal) return;
+      if (method === 'GET') {
+        const users = await auc.listUsers(db, {});
+        return json(res, 200, { ok: true, users });
+      }
+      let chunks = [];
+      for await (const c of req) chunks.push(c);
+      const result = await auc.updateUserRole(db, id, Buffer.concat(chunks).toString('utf8'));
+      if (!result.ok) return json(res, result.status, { error: result.message });
+      return json(res, 200, { ok: true, message: 'Role updated successfully.', user: result.user });
+    } finally { if (db && db.close) db.close(); }
+  } catch (err) {
+    console.error('adminUsers error:', err);
+    return json(res, 500, { error: 'Unable to manage users. Please try again.' });
+  }
+}
+
+module.exports = { register, login, profile, logout, me, adminUsers };

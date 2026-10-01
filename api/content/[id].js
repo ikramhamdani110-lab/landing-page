@@ -3,7 +3,8 @@
 //   PUT    /api/content/:id — update item (auth required)
 //   PATCH  /api/content/:id — update item (auth required)
 //   DELETE /api/content/:id — delete item (auth required)
-const { pgConnectionString, verifyAuth, getContent, updateContent, deleteContent, validateContent } = require('../../content-core');
+const { pgConnectionString, getContent, updateContent, deleteContent, validateContent } = require('../../content-core');
+const rbac = require('../../rbac-core');
 
 let sqliteDb = null;
 function getDb() {
@@ -14,7 +15,13 @@ function getDb() {
   return sqliteDb;
 }
 
-const unauthorized = (status, json) => { status(401); json({ success: false, message: 'You are not authorized to perform this action.' }); };
+// Task 9 (RBAC): 401 unauthenticated, 403 role lacks the permission.
+const guard = async (req, res, permission) => {
+  const principal = await rbac.getPrincipal(req);
+  if (!principal) { rbac.unauthorized(res, 'cms'); return null; }
+  if (!rbac.can(principal.role, permission)) { rbac.forbidden(res, 'cms'); return null; }
+  return principal;
+};
 
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
@@ -25,7 +32,7 @@ module.exports = async (req, res) => {
   const id = m ? decodeURIComponent(m[1]) : null;
 
   if (req.method === 'GET') {
-    if (!verifyAuth(req)) return unauthorized(status, json);
+    if (!await guard(req, res, rbac.PERMISSIONS.CONTENT_READ)) return;
     try {
       const item = await getContent(getDb(), id);
       if (!item) return status(404), json({ success: false, message: 'Content not found.' });
@@ -37,14 +44,17 @@ module.exports = async (req, res) => {
   }
 
   if (req.method === 'PUT' || req.method === 'PATCH') {
-    if (!verifyAuth(req)) return unauthorized(status, json);
+    const principal = await guard(req, res, rbac.PERMISSIONS.CONTENT_UPDATE);
+    if (!principal) return;
     let body = '';
     req.on('data', c => { body += c; if (body.length > 2e5) req.destroy(); });
     req.on('end', async () => {
       const v = validateContent(body);
       if (!v.ok) { status(v.status); return json({ success: false, message: v.message }); }
       try {
-        const item = await updateContent(getDb(), id, v.fields);
+        // An EMPLOYEE may only update permitted fields; every other column is
+        // carried over from the stored record.
+        const item = await updateContent(getDb(), id, rbac.mergeContentFields(await getContent(getDb(), id), v.fields, principal.role));
         if (!item) return status(404), json({ success: false, message: 'Content not found.' });
         return status(200), json({ success: true, message: 'Content updated successfully.', item });
       } catch (err) {
@@ -56,7 +66,7 @@ module.exports = async (req, res) => {
   }
 
   if (req.method === 'DELETE') {
-    if (!verifyAuth(req)) return unauthorized(status, json);
+    if (!await guard(req, res, rbac.PERMISSIONS.CONTENT_DELETE)) return;
     try {
       const deleted = await deleteContent(getDb(), id);
       if (!deleted) return status(404), json({ success: false, message: 'Content not found.' });

@@ -3,7 +3,8 @@
 //   POST /api/content        — create content (auth required)
 // Production database: hosted PostgreSQL (Neon) via DATABASE_URL / POSTGRES_URL.
 // Local SQLite is only used when no hosted DB is configured.
-const { pgConnectionString, verifyAuth, listContent, createContent, validateContent } = require('../../content-core');
+const { pgConnectionString, listContent, createContent, validateContent } = require('../../content-core');
+const rbac = require('../../rbac-core');
 
 // Local-dev shim when run under plain Node http without a hosted DB
 let sqliteDb = null;
@@ -15,7 +16,14 @@ function getDb() {
   return sqliteDb;
 }
 
-const unauthorized = (status, json) => { status(401); json({ success: false, message: 'You are not authorized to perform this action.' }); };
+// Task 9 (RBAC): 401 when unauthenticated, 403 when the role lacks the permission.
+// Writes the response itself and returns null so callers can `return` on failure.
+const guard = async (req, res, permission) => {
+  const principal = await rbac.getPrincipal(req);
+  if (!principal) { rbac.unauthorized(res, 'cms'); return null; }
+  if (!rbac.can(principal.role, permission)) { rbac.forbidden(res, 'cms'); return null; }
+  return principal;
+};
 
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
@@ -23,7 +31,7 @@ module.exports = async (req, res) => {
   const json = (o) => (typeof res.json === 'function' ? res.json(o) : res.end(JSON.stringify(o)));
 
   if (req.method === 'GET') {
-    if (!verifyAuth(req)) return unauthorized(status, json);
+    if (!await guard(req, res, rbac.PERMISSIONS.CONTENT_READ)) return;
     const q = new URLSearchParams(req.url.split('?')[1] || '');
     try {
       const items = await listContent(getDb(), {
@@ -37,7 +45,7 @@ module.exports = async (req, res) => {
   }
 
   if (req.method === 'POST') {
-    if (!verifyAuth(req)) return unauthorized(status, json);
+    if (!await guard(req, res, rbac.PERMISSIONS.CONTENT_CREATE)) return;
     let body = '';
     req.on('data', c => { body += c; if (body.length > 2e5) req.destroy(); });
     req.on('end', async () => {

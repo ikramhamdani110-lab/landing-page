@@ -68,6 +68,33 @@
     return d.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   }
 
+  // ---------- Task 9 (RBAC): UI permission layer ----------
+  // Purely a UX aid — the backend is authoritative and answers 403 regardless.
+  // Mirrors the server matrix in rbac-core.js.
+  const PERMISSIONS = {
+    CONTENT_CREATE: 'content:create', CONTENT_UPDATE: 'content:update', CONTENT_DELETE: 'content:delete',
+    SERVICES_CREATE: 'services:create', SERVICES_UPDATE: 'services:update', SERVICES_DELETE: 'services:delete',
+    SETTINGS_READ: 'settings:read', SETTINGS_UPDATE: 'settings:update', USERS_MANAGE: 'users:manage'
+  };
+  const ROLE_PERMISSIONS = {
+    ADMIN: Object.values(PERMISSIONS),
+    EMPLOYEE: [PERMISSIONS.CONTENT_UPDATE]
+  };
+  let currentRole = 'EMPLOYEE';
+
+  function can(permission) {
+    return (ROLE_PERMISSIONS[currentRole] || []).includes(permission);
+  }
+  function isAdmin() { return currentRole === 'ADMIN'; }
+
+  function applyRoleUi() {
+    // Hide actions the current role cannot perform. The API still rejects them.
+    for (const el of document.querySelectorAll('[data-needs-permission]')) {
+      el.classList.toggle('hidden', !can(el.dataset.needsPermission));
+    }
+    document.body.setAttribute('data-role', currentRole);
+  }
+
   // ---------- auth flow ----------
   async function initAuth() {
     if (!getToken()) return showLogin();
@@ -89,6 +116,9 @@
     $('loginView').classList.add('hidden');
     $('cmsView').classList.remove('hidden');
     if (user && user.username) $('adminName').textContent = user.username;
+    // Task 9: the role comes from /api/auth/me (server-derived), not from storage.
+    currentRole = (user && String(user.role || '').toUpperCase()) === 'ADMIN' ? 'ADMIN' : 'EMPLOYEE';
+    applyRoleUi();
     loadContent();
     loadSiteContent();
     loadServices();
@@ -176,8 +206,8 @@
         <td class="cell-date">${fmtDate(it.createdAt)}</td>
         <td class="cell-date">${fmtDate(it.updatedAt)}</td>
         <td class="td-actions">
-          <button class="action-btn edit" data-action="edit" title="Edit" aria-label="Edit"><i class='bx bx-edit'></i></button>
-          <button class="action-btn delete" data-action="delete" title="Delete" aria-label="Delete"><i class='bx bx-trash'></i></button>
+          ${can(PERMISSIONS.CONTENT_UPDATE) ? `<button class="action-btn edit" data-action="edit" title="Edit" aria-label="Edit"><i class='bx bx-edit'></i></button>` : ''}
+          ${can(PERMISSIONS.CONTENT_DELETE) ? `<button class="action-btn delete" data-action="delete" title="Delete" aria-label="Delete"><i class='bx bx-trash'></i></button>` : ''}
         </td>
       </tr>`).join('');
 
@@ -195,8 +225,8 @@
           <span class="cc-date">Updated ${fmtDate(it.updatedAt)}</span>
         </div>
         <div class="cc-actions">
-          <button class="action-btn edit" data-action="edit"><i class='bx bx-edit'></i> Edit</button>
-          <button class="action-btn delete" data-action="delete"><i class='bx bx-trash'></i> Delete</button>
+          ${can(PERMISSIONS.CONTENT_UPDATE) ? `<button class="action-btn edit" data-action="edit"><i class='bx bx-edit'></i> Edit</button>` : ''}
+          ${can(PERMISSIONS.CONTENT_DELETE) ? `<button class="action-btn delete" data-action="delete"><i class='bx bx-trash'></i> Delete</button>` : ''}
         </div>
       </div>`).join('');
   }
@@ -363,8 +393,8 @@
     const row = btn.closest('[data-id]');
     if (!row) return;
     const id = row.dataset.id;
-    if (btn.dataset.action === 'edit') openEdit(id);
-    if (btn.dataset.action === 'delete') openDelete(id);
+    if (btn.dataset.action === 'edit' && can(PERMISSIONS.CONTENT_UPDATE)) openEdit(id);
+    if (btn.dataset.action === 'delete' && can(PERMISSIONS.CONTENT_DELETE)) openDelete(id);
   });
 
   document.addEventListener('keydown', (e) => {
