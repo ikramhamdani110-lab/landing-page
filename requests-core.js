@@ -1,7 +1,7 @@
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const REQUEST_STATUSES = ['NEW', 'REVIEWING', 'MATCHING', 'IN_PROGRESS', 'COMPLETED', 'REJECTED'];
+const REQUEST_STATUSES = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'REJECTED'];
 const REQUEST_CATEGORIES = ['Design', 'Web Development', 'Software / Engineering', 'Creative Technology', 'Strategy', 'Other'];
-const DEFAULT_STATUS = 'NEW';
+const DEFAULT_STATUS = 'PENDING';
 
 function pgConnectionString() {
   return process.env.DATABASE_URL || process.env.POSTGRES_URL || null;
@@ -22,7 +22,7 @@ function createDb(dbFile) {
     budget TEXT,
     deadline TEXT,
     additional_details TEXT,
-    status TEXT NOT NULL DEFAULT 'NEW' CHECK(status IN ('NEW','REVIEWING','MATCHING','IN_PROGRESS','COMPLETED','REJECTED')),
+    status TEXT NOT NULL DEFAULT 'PENDING' CHECK(status IN ('PENDING','IN_PROGRESS','COMPLETED','REJECTED')),
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   )`);
@@ -52,7 +52,7 @@ async function ensurePgTable() {
     budget TEXT,
     deadline TEXT,
     additional_details TEXT,
-    status VARCHAR(20) NOT NULL DEFAULT 'NEW',
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
   )`);
@@ -73,6 +73,9 @@ function shapeRequest(r) {
     deadline: r.deadline,
     additionalDetails: r.additional_details,
     status: r.status,
+    // Dashboard-facing aliases (Task 7 UI renders requestType/subject)
+    requestType: r.category,
+    subject: r.title,
     createdAt: r.created_at ? (typeof r.created_at === 'string' ? r.created_at : new Date(r.created_at).toISOString()) : null,
     updatedAt: r.updated_at ? (typeof r.updated_at === 'string' ? r.updated_at : new Date(r.updated_at).toISOString()) : null
   };
@@ -111,11 +114,11 @@ function validateRequest(data) {
     return { ok: false, status: 400, message: 'Please choose a valid service category.', field: 'category' };
   }
 
-  const title = normalizeText(body.title || body.projectTitle || body.project_title, 200);
-  if (!title) return { ok: false, status: 400, message: 'Project title is required.', field: 'title' };
+  const title = normalizeText(body.title || body.subject || body.requestTitle || body.project_title, 200);
+  if (!title || title.length < 3) return { ok: false, status: 400, message: 'Subject is required (at least 3 characters).', field: 'title' };
 
-  const description = normalizeText(body.description || body.projectDescription || body.project_description, 5000);
-  if (!description) return { ok: false, status: 400, message: 'Project description is required.', field: 'description' };
+  const description = normalizeText(body.description || body.message || body.project_description, 5000);
+  if (!description || description.length < 3) return { ok: false, status: 400, message: 'Description is required (at least 3 characters).', field: 'description' };
 
   const budget = normalizeText(body.budget, 80);
   const deadline = normalizeText(body.deadline, 50);
@@ -165,14 +168,14 @@ async function createRequest(db, body) {
       await ensurePgTable();
       const res = await getPool().query(
         `INSERT INTO customer_requests (customer_name, customer_email, company_name, category, title, description, budget, deadline, additional_details, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'NEW') RETURNING *`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'PENDING') RETURNING *`,
         [v.fields.customerName, v.fields.customerEmail, v.fields.companyName || null, v.fields.category, v.fields.title, v.fields.description, v.fields.budget, v.fields.deadline, v.fields.additionalDetails]
       );
-      return { ok: true, ...shapeRequest(res.rows[0]), status: 'NEW' };
+      return { ok: true, ...shapeRequest(res.rows[0]), status: 'PENDING' };
     }
 
     const info = db.prepare(`INSERT INTO customer_requests (customer_name, customer_email, company_name, category, title, description, budget, deadline, additional_details, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'NEW')`).run(
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING')`).run(
       v.fields.customerName,
       v.fields.customerEmail,
       v.fields.companyName || null,
@@ -184,7 +187,7 @@ async function createRequest(db, body) {
       v.fields.additionalDetails
     );
     const row = db.prepare('SELECT * FROM customer_requests WHERE id = ?').get(info.lastInsertRowid);
-    return { ok: true, ...shapeRequest(row), status: 'NEW' };
+    return { ok: true, ...shapeRequest(row), status: 'PENDING' };
   } catch (err) {
     console.error('createRequest failed:', err.message);
     return { ok: false, status: 500, message: 'Unable to submit the request right now. Please try again.' };
@@ -197,7 +200,21 @@ async function listRequests(db, options = {}) {
   const search = typeof opts.search === 'string' ? opts.search.trim() : '';
   const sort = opts.sort === 'updated' ? 'updated_at' : 'created_at';
   const limit = Math.min(Math.max(Number(opts.limit) || 25, 1), 100);
-  const offset = Math.max(Number(opts.offset) || 0, 0);
+  // Accept either an explicit offset or a 1-based page number.
+  const page = Math.max(Number(opts.page) || 0, 0);
+  const offset = Math.max(page > 0 ? (page - 1) * limit : Number(opts.offset) || 0, 0);
+
+  // Task 8 — server-side type + date-range filters (all applied in the SQL WHERE clause).
+  // Malformed values are IGNORED (return the unfiltered result); only a genuinely
+  // contradictory range (from > to) is a client error.
+  const type = typeof opts.type === 'string' ? opts.type.trim() : '';
+  const typeFilter = type && REQUEST_CATEGORIES.includes(type) ? type : '';
+  const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+  const dateFrom = typeof opts.dateFrom === 'string' && dateRe.test(opts.dateFrom) ? opts.dateFrom : '';
+  const dateTo = typeof opts.dateTo === 'string' && dateRe.test(opts.dateTo) ? opts.dateTo : '';
+  if (dateFrom && dateTo && dateFrom > dateTo) {
+    return { error: 'The start date must be on or before the end date.', status: 400 };
+  }
 
   if (pgConnectionString()) {
     await ensurePgTable();
@@ -208,10 +225,21 @@ async function listRequests(db, options = {}) {
       where.push(`status = $${params.length + 1}`);
       params.push(status);
     }
-
+    if (typeFilter) {
+      where.push(`category = $${params.length + 1}`);
+      params.push(typeFilter);
+    }
     if (search) {
       where.push(`(customer_name ILIKE $${params.length + 1} OR customer_email ILIKE $${params.length + 1} OR company_name ILIKE $${params.length + 1} OR title ILIKE $${params.length + 1} OR description ILIKE $${params.length + 1})`);
       params.push(`%${search}%`);
+    }
+    if (dateFrom) {
+      where.push(`created_at >= $${params.length + 1}::date`);
+      params.push(dateFrom);
+    }
+    if (dateTo) {
+      where.push(`created_at < ($${params.length + 1}::date + interval '1 day')`);
+      params.push(dateTo);
     }
 
     const whereSql = where.length ? ' WHERE ' + where.join(' AND ') : '';
@@ -221,7 +249,8 @@ async function listRequests(db, options = {}) {
       [...params, limit, offset]
     );
 
-    return { items: rowsRes.rows.map(shapeRequest), total: totalRes.rows[0].total };
+    const total = totalRes.rows[0].total;
+    return { items: rowsRes.rows.map(shapeRequest), total, limit, offset, page: Math.floor(offset / limit) + 1, totalPages: Math.max(Math.ceil(total / limit), 1) };
   }
 
   const conditions = [];
@@ -230,16 +259,28 @@ async function listRequests(db, options = {}) {
     conditions.push('status = ?');
     params.push(status);
   }
+  if (typeFilter) {
+    conditions.push('category = ?');
+    params.push(typeFilter);
+  }
   if (search) {
     conditions.push('(customer_name LIKE ? OR customer_email LIKE ? OR company_name LIKE ? OR title LIKE ? OR description LIKE ?)');
     const v = `%${search}%`;
     params.push(v, v, v, v, v);
   }
+  if (dateFrom) {
+    conditions.push("created_at >= ? || ' 00:00:00'");
+    params.push(dateFrom);
+  }
+  if (dateTo) {
+    conditions.push("created_at < date(?, '+1 day') || ' 00:00:00'");
+    params.push(dateTo);
+  }
 
   const whereSql = conditions.length ? ' WHERE ' + conditions.join(' AND ') : '';
   const total = db.prepare(`SELECT COUNT(*) AS total FROM customer_requests${whereSql}`).get(...params).total;
   const rows = db.prepare(`SELECT * FROM customer_requests${whereSql} ORDER BY ${sort} DESC, id DESC LIMIT ? OFFSET ?`).all(...params, limit, offset);
-  return { items: rows.map(shapeRequest), total };
+  return { items: rows.map(shapeRequest), total, limit, offset, page: Math.floor(offset / limit) + 1, totalPages: Math.max(Math.ceil(total / limit), 1) };
 }
 
 async function getRequestById(db, id) {

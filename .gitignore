@@ -19,3 +19,6 @@ qa-dashshots.mjs
 *.png
 !images/**
 !videos/**
+
+uploads/
+srv*.log

@@ -161,6 +161,11 @@
             document.querySelectorAll('.dash-nav-item').forEach(function (i) { i.classList.remove('active'); });
             item.classList.add('active');
             $('topbarTitle').textContent = item.textContent.trim();
+            // Task 10: show the matching panel (Dashboard / Documents / Profile / Settings)
+            var panelName = item.dataset.nav;
+            document.querySelectorAll('.dash-panel').forEach(function (p) {
+                p.classList.toggle('hidden', p.id !== 'panel-' + panelName);
+            });
             closeSidebar();
         });
     });
@@ -169,4 +174,11 @@
     $('cancelBtn').addEventListener('click', closeEdit);
 
     loadProfile();
+    // Task 10 — wire the Documents section to the same authenticated session.
+    if (window.TaloraDocuments && typeof window.TaloraDocuments.init === 'function') {
+        window.TaloraDocuments.init({
+            getToken: getToken,
+            onAuthError: function () { window.location.replace('login.html'); }
+        });
+    }
 })();

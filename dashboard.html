@@ -20,6 +20,7 @@
             </div>
             <nav class="dash-nav">
                 <a href="#dashboard" class="dash-nav-item active" data-nav="dashboard"><i class='bx bxs-dashboard'></i> Dashboard</a>
+                <a href="#documents" class="dash-nav-item" data-nav="documents"><i class='bx bx-folder'></i> Documents</a>
                 <a href="#profile" class="dash-nav-item" data-nav="profile"><i class='bx bx-user'></i> Profile</a>
                 <a href="#settings" class="dash-nav-item" data-nav="settings"><i class='bx bx-cog'></i> Settings</a>
             </nav>
@@ -93,10 +94,52 @@
                         </article>
                     </div>
                 </section>
+
+                <!-- ============ Documents (Task 10) ============ -->
+                <section class="dash-panel hidden" id="panel-documents">
+                    <div class="dash-panel-head">
+                        <div>
+                            <h1 class="dash-welcome">Documents</h1>
+                            <p class="dash-welcome-sub">Upload and manage your files (PDF, DOC(X), XLS(X), PPT(X), TXT, PNG, JPG · max 10 MB)</p>
+                        </div>
+                        <button class="btn btn-ghost btn-sm" id="docRefreshBtn"><i class='bx bx-refresh'></i> Refresh</button>
+                    </div>
+                    <article class="dash-card doc-upload-card">
+                        <header class="dash-card-head">
+                            <h2><i class='bx bx-cloud-upload'></i> Upload a document</h2>
+                        </header>
+                        <form id="docUploadForm" novalidate>
+                            <label class="field doc-file-field" for="docFile">
+                                <span class="doc-choose-label">Choose file</span>
+                                <input type="file" id="docFile" name="file"
+                                       accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.png,.jpg,.jpeg">
+                            </label>
+                            <p class="doc-selected hidden" id="docSelected"><i class='bx bx-file'></i> <span id="docSelectedName"></span></p>
+                            <div class="form-message" id="docMessage" role="alert"></div>
+                            <div class="dash-edit-actions">
+                                <button type="submit" class="btn btn-primary" id="docUploadBtn" disabled><i class='bx bx-upload'></i> Upload</button>
+                            </div>
+                        </form>
+                    </article>
+                    <div class="form-message" id="docListMessage" role="alert"></div>
+                    <div class="table-state" id="docLoading">
+                        <span class="dash-spinner"></span> Loading documents…
+                    </div>
+                    <div class="table-state hidden" id="docError">
+                        <i class='bx bx-error'></i> <span id="docErrorText">Something went wrong.</span>
+                    </div>
+                    <div class="table-state hidden" id="docEmpty">
+                        <i class='bx bx-folder-open'></i> No documents yet. Upload your first file above.
+                    </div>
+                    <div class="dash-cards hidden" id="docListWrap">
+                        <!-- document cards rendered by documents-ui.js -->
+                    </div>
+                </section>
             </div>
         </main>
     </div>
 
+    <script src="documents-ui.js"></script>
     <script src="dashboard.js"></script>
 </body>
 </html>

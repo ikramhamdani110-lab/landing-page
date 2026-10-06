@@ -114,3 +114,41 @@
     .dash-row .v { text-align: left; }
     .dash-edit-actions { flex-wrap: wrap; }
 }
+
+/* ---------- Documents (Task 10) ---------- */
+/* Panels (Task 7 layout, reused by the Documents panel) */
+.dash-panel-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 1rem; margin-bottom: 1rem;
+}
+.table-state {
+  display: flex; align-items: center; gap: 0.5rem;
+  color: var(--text-secondary); padding: 2.5rem 0; justify-content: center;
+}
+.hidden { display: none !important; }
+.doc-upload-card { margin-bottom: 1.2rem; }
+.doc-upload-card form { display: flex; flex-direction: column; gap: 0.8rem; }
+.doc-file-field {
+  display: flex; align-items: center; gap: 0.8rem;
+  border: 1px dashed rgba(114, 161, 222, 0.4); border-radius: 10px;
+  padding: 0.9rem 1rem; cursor: pointer; transition: border-color 0.2s ease;
+}
+.doc-file-field:hover { border-color: rgba(114, 161, 222, 0.8); }
+.doc-file-field input[type="file"] { color: var(--text-secondary); max-width: 100%; }
+.doc-choose-label { color: var(--text-secondary); font-size: 0.9rem; white-space: nowrap; }
+.doc-selected {
+  display: flex; align-items: center; gap: 0.4rem;
+  color: #fff; font-size: 0.9rem; margin: 0; word-break: break-word;
+}
+.doc-selected i { color: var(--primary-color); }
+.dash-spinner-inline {
+  display: inline-block; width: 0.9rem; height: 0.9rem; margin-right: 0.4rem;
+  border: 2px solid rgba(255, 255, 255, 0.3); border-top-color: #fff;
+  border-radius: 50%; animation: dashSpin 0.8s linear infinite; vertical-align: middle;
+}
+.doc-item { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.doc-item-main { display: flex; align-items: center; gap: 0.8rem; min-width: 0; }
+.doc-icon { font-size: 1.6rem; color: var(--primary-color); flex-shrink: 0; }
+.doc-meta { display: flex; flex-direction: column; min-width: 0; }
+.doc-name { color: #fff; font-weight: 600; word-break: break-word; }
+.doc-sub { color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.15rem; }

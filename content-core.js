@@ -238,14 +238,43 @@ function verifyAuthInner(req) {
   if (!header || typeof header !== 'string') return false;
   const m = /^Bearer\s+(.+)$/i.exec(header.trim());
   if (!m) return false;
-  const parts = m[1].split('.');
+  const token = m[1];
+  const parts = token.split('.');
   if (parts.length !== 2) return false;
   const expected = sign(parts[0]);
   const a = Buffer.from(expected), b = Buffer.from(parts[1]);
   if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return false;
   try {
     const payload = JSON.parse(Buffer.from(parts[0], 'base64url').toString());
-    return typeof payload.exp === 'number' && payload.exp > Date.now();
+    if (typeof payload.exp !== 'number' || payload.exp <= Date.now()) return false;
+    // A token revoked via /api/auth/admin-logout is no longer valid.
+    if (revokedTokens.has(token)) return false;
+    return true;
+  } catch { return false; }
+}
+
+// ---------- Admin token revocation (best effort, in-memory per instance) ----------
+// Company tokens are stateless HMAC tokens; logout records the presented token so it
+// stops verifying. Entries are dropped when the token's own expiry passes, so the set
+// cannot grow unboundedly.
+const revokedTokens = new Set();
+
+function revokeAdminToken(req) {
+  try {
+    const header = req.headers && (req.headers.authorization || req.headers.Authorization);
+    if (!header || typeof header !== 'string') return false;
+    const m = /^Bearer\s+(.+)$/i.exec(header.trim());
+    const token = m && m[1];
+    if (!token) return false;
+    const parts = token.split('.');
+    if (parts.length !== 2) return false;
+    const expected = sign(parts[0]);
+    const a = Buffer.from(expected), b = Buffer.from(parts[1]);
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return false;
+    const payload = JSON.parse(Buffer.from(parts[0], 'base64url').toString());
+    if (typeof payload.exp !== 'number' || payload.exp <= Date.now()) return false;
+    revokedTokens.add(token);
+    return true;
   } catch { return false; }
 }
 
@@ -279,5 +308,5 @@ module.exports = {
   CATEGORIES, SECTIONS, STATUSES,
   pgConnectionString, createDb: process.env.VERCEL === '1' ? createDbServerless : createDb,
   validateContent, listContent, getContent, createContent, updateContent, deleteContent,
-  adminCredentials, verifyAuth, login
+  adminCredentials, verifyAuth, login, revokeAdminToken
 };

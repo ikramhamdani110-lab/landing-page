@@ -6,6 +6,7 @@ const cc = require('./content-core');
 const sc = require('./site-core');
 const svc = require('./services-core');
 const uapi = require('./auth-user-api');
+const dapi = require('./documents-api');
 const reqCore = require('./requests-core');
 const rbac = require('./rbac-core');
 const root = __dirname;
@@ -50,11 +51,17 @@ async function handleRequests(req, res, p) {
       const data = await reqCore.listRequests(requestDb || db, {
         status: q.status,
         search: q.search,
+        type: q.type,
+        dateFrom: q.dateFrom,
+        dateTo: q.dateTo,
         sort: q.sort === 'updated' ? 'updated' : 'newest',
         limit: q.limit || 25,
+        page: q.page,
         offset: q.offset || 0
       });
-      return sendJson(res, 200, { success: true, items: data.items, total: data.total });
+      if (data.error) return sendJson(res, data.status || 400, { success: false, message: data.error });
+      const pagination = { page: data.page, limit: data.limit, total: data.total, totalPages: data.totalPages };
+      return sendJson(res, 200, { success: true, items: data.items, total: data.total, pagination });
     } catch (err) {
       console.error('GET /api/requests failed:', err.message);
       return sendJson(res, 500, { success: false, message: 'Failed to load requests.' });
@@ -296,7 +303,7 @@ const q = Object.fromEntries(new URLSearchParams(req.url.split('?')[1] || ''));
     }
     return handleContact(req, res);
   }
-  if (p === '/api/auth/login') {
+  if (p === '/api/auth/login' || p === '/api/auth/admin-login') {
     if (req.method !== 'POST') {
       res.writeHead(405, { 'Content-Type': 'application/json', 'Allow': 'POST' });
       return res.end(JSON.stringify({ success: false, message: 'Method not allowed.' }));
@@ -312,6 +319,24 @@ const q = Object.fromEntries(new URLSearchParams(req.url.split('?')[1] || ''));
   // Dual-aware: a valid user token => user profile, a valid admin token => admin info,
   // no/invalid token => 401. Uses the same shared handler as the Vercel deployment.
   if (p === '/api/auth/me') return uapi.me(req, res);
+  // Company (admin) logout alias — same handler as /api/auth/logout for user tokens.
+  if (p === '/api/auth/admin-logout') {
+    if (req.method !== 'POST') {
+      res.writeHead(405, { 'Content-Type': 'application/json', 'Allow': 'POST' });
+      return res.end(JSON.stringify({ success: false, message: 'Method not allowed.' }));
+    }
+    try {
+      // Company tokens are stateless HMAC tokens — record the presented token in the
+      // revocation set so it stops verifying (same best-effort pattern as rate limiting).
+      if (cc.revokeAdminToken(req)) {
+        return sendJson(res, 200, { success: true, message: 'Logged out.' });
+      }
+      return sendJson(res, 401, { success: false, message: 'You are not authorized to perform this action.' });
+    } catch (err) {
+      console.error('admin logout failed:', err.message);
+      return sendJson(res, 500, { success: false, message: 'Unable to log out. Please try again.' });
+    }
+  }
   // Public, unauthenticated endpoint: only PUBLISHED website content is exposed
   if (p === '/api/website-content') {
     if (req.method !== 'GET') {
@@ -385,6 +410,13 @@ const q = Object.fromEntries(new URLSearchParams(req.url.split('?')[1] || ''));
   if (p === '/api/auth/user-login' && req.method === 'POST') return uapi.login(req, res);
   if (p === '/api/auth/logout' && req.method === 'POST') return uapi.logout(req, res);
   if (p === '/api/user/profile' && (req.method === 'GET' || req.method === 'PUT')) return uapi.profile(req, res);
+  // ---- Task 10: file & document management (multipart upload, list, delete) ----
+  if (p === '/api/documents' && (req.method === 'POST' || req.method === 'GET')) {
+    return req.method === 'POST' ? dapi.upload(req, res) : dapi.list(req, res);
+  }
+  if (p.startsWith('/api/documents/') && req.method === 'DELETE') {
+    return dapi.remove(req, res, p.split('/')[3]);
+  }
   // ---- Task 9: RBAC user/role management (ADMIN only; 403 for EMPLOYEE) ----
   if (p === '/api/admin/users' || p.startsWith('/api/admin/users/')) return uapi.adminUsers(req, res);
   if (p === '/') p = '/index.html';

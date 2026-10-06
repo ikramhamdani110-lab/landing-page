@@ -8,6 +8,7 @@ const authUserCore = require('../auth-user-core');
 // (serve.js) and this consolidated handler use the SAME role enum, the SAME
 // permission matrix and the SAME guards, so the two deployments cannot drift.
 const rbac = require('../rbac-core');
+const documentsApi = require('../documents-api');
 
 const sqliteDbs = new Map();
 
@@ -337,6 +338,15 @@ module.exports = async function handler(req, res) {
     if (parts[0] === 'auth' && parts[1] === 'user-login') return authUserApi.login(req, res);
     if (parts[0] === 'auth' && parts[1] === 'me') return handleMe(req, res);
     if (parts[0] === 'user' && parts[1] === 'profile') return authUserApi.profile(req, res);
+    // ---- Task 10: file & document management (multipart upload, list, delete) ----
+    if (parts[0] === 'documents') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (parts.length === 1 && method(req) === 'POST') return documentsApi.upload(req, res);
+      if (parts.length === 1 && method(req) === 'GET') return documentsApi.list(req, res);
+      if (parts.length === 2 && method(req) === 'DELETE') return documentsApi.remove(req, res, parts[1]);
+      res.setHeader('Allow', 'GET, POST, DELETE');
+      return statusJson(res, 405, { success: false, message: 'Method not allowed.' });
+    }
     // Task 9: /api/admin/users and /api/admin/users/:id (ADMIN only)
     if (parts[0] === 'admin' && parts[1] === 'users') return handleAdminUsers(req, res);
     return statusJson(res, 404, { success: false, message: 'Not found.' });
