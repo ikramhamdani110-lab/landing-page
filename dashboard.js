@@ -51,6 +51,12 @@
         $('pSince').textContent = formatDate(u.createdAt);
         $('pSignupType').textContent = signupTypeLabel(u.signupType);
         $('pRole').textContent = roleLabel(u.role);
+        // Task 11 — reveal admin-only project controls once the role is known.
+        // (Task 9 stores ADMIN/EMPLOYEE; legacy rows may still say 'user' = employee.)
+        var isAdminUser = String(u.role || '').toUpperCase() === 'ADMIN';
+        if (window.TaloraProjects && typeof window.TaloraProjects.setAdmin === 'function') {
+            window.TaloraProjects.setAdmin(isAdminUser);
+        }
     }
 
     // ---- Initial load: GET /api/user/profile with the bearer token ----
@@ -179,6 +185,15 @@
         window.TaloraDocuments.init({
             getToken: getToken,
             onAuthError: function () { window.location.replace('login.html'); }
+        });
+    }
+    // Task 11 — wire the Projects section. isAdmin comes from the profile payload;
+    // the backend re-checks every permission server-side regardless.
+    if (window.TaloraProjects && typeof window.TaloraProjects.init === 'function') {
+        window.TaloraProjects.init({
+            getToken: getToken,
+            onAuthError: function () { window.location.replace('login.html'); },
+            isAdmin: !!(currentUser && currentUser.role === 'admin')
         });
     }
 })();

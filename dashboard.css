@@ -152,3 +152,46 @@
 .doc-meta { display: flex; flex-direction: column; min-width: 0; }
 .doc-name { color: #fff; font-weight: 600; word-break: break-word; }
 .doc-sub { color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.15rem; }
+
+/* ---------- Project Management (Task 11) ---------- */
+.proj-stats {
+  display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.2rem;
+}
+.proj-stat {
+  flex: 1 1 140px; background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: 12px; padding: 0.9rem 1rem; display: flex; flex-direction: column; gap: 0.2rem;
+}
+.proj-stat-num { color: #fff; font-size: 1.6rem; font-weight: 700; }
+.proj-stat-label { color: var(--text-secondary); font-size: 0.8rem; }
+.proj-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+.proj-form-grid .proj-desc-field { grid-column: 1 / -1; }
+.proj-team-field { grid-column: 1 / -1; }
+.proj-team-boxes { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; }
+.proj-team-check { display: flex; align-items: center; gap: 0.35rem; color: var(--text-secondary); font-size: 0.9rem; }
+.proj-team-loading { color: var(--text-secondary); font-size: 0.85rem; }
+.proj-item { display: flex; flex-direction: column; gap: 0.5rem; }
+.proj-item-main { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+.proj-name { color: #fff; font-weight: 600; font-size: 1.05rem; }
+.proj-client, .proj-team, .proj-date { color: var(--text-secondary); font-size: 0.85rem; }
+.proj-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.proj-status-chip {
+  align-self: flex-start; font-size: 0.75rem; font-weight: 600; padding: 0.2rem 0.6rem;
+  border-radius: 999px; border: 1px solid transparent;
+}
+.st-notstarted { color: #9aa7b8; border-color: #4a5568; }
+.st-inprogress { color: #72a1de; border-color: rgba(114, 161, 222, 0.5); }
+.st-completed { color: #5ad1a0; border-color: rgba(90, 209, 160, 0.5); }
+.st-onhold { color: #e0b458; border-color: rgba(224, 180, 88, 0.5); }
+.clients-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.8rem; max-height: 40vh; overflow-y: auto; }
+.client-row { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.8rem; }
+.client-info { display: flex; flex-direction: column; min-width: 0; }
+.client-name { color: #fff; font-weight: 600; }
+.client-sub { color: var(--text-secondary); font-size: 0.8rem; }
+.client-actions { display: flex; gap: 0.4rem; flex-shrink: 0; }
+.clients-form-title { color: #fff; margin: 0.6rem 0 0.5rem; }
+@media (max-width: 720px) {
+  .proj-form-grid { grid-template-columns: 1fr; }
+  .proj-stats { gap: 0.6rem; }
+  .proj-stat { flex: 1 1 45%; }
+}
+

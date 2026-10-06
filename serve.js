@@ -7,6 +7,7 @@ const sc = require('./site-core');
 const svc = require('./services-core');
 const uapi = require('./auth-user-api');
 const dapi = require('./documents-api');
+const papi = require('./projects-api');
 const reqCore = require('./requests-core');
 const rbac = require('./rbac-core');
 const root = __dirname;
@@ -416,6 +417,16 @@ const q = Object.fromEntries(new URLSearchParams(req.url.split('?')[1] || ''));
   }
   if (p.startsWith('/api/documents/') && req.method === 'DELETE') {
     return dapi.remove(req, res, p.split('/')[3]);
+  }
+  // ---- Task 11: client & project management ----
+  if (p === '/api/clients' && (req.method === 'GET' || req.method === 'POST')) return papi.clientsCollection(req, res);
+  if (p === '/api/projects/users' && req.method === 'GET') return papi.teamMembers(req, res);
+  if (p === '/api/projects' && (req.method === 'GET' || req.method === 'POST')) return papi.projectsCollection(req, res);
+  if (p.startsWith('/api/clients/') && (req.method === 'GET' || req.method === 'PATCH' || req.method === 'PUT' || req.method === 'DELETE')) {
+    return papi.clientItem(req, res, p.split('/')[3]);
+  }
+  if (p.startsWith('/api/projects/') && (req.method === 'GET' || req.method === 'PATCH' || req.method === 'PUT' || req.method === 'DELETE')) {
+    return papi.projectItem(req, res, p.split('/')[3]);
   }
   // ---- Task 9: RBAC user/role management (ADMIN only; 403 for EMPLOYEE) ----
   if (p === '/api/admin/users' || p.startsWith('/api/admin/users/')) return uapi.adminUsers(req, res);

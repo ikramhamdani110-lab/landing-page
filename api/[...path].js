@@ -9,6 +9,7 @@ const authUserCore = require('../auth-user-core');
 // permission matrix and the SAME guards, so the two deployments cannot drift.
 const rbac = require('../rbac-core');
 const documentsApi = require('../documents-api');
+const projectsApi = require('../projects-api');
 
 const sqliteDbs = new Map();
 
@@ -347,6 +348,12 @@ module.exports = async function handler(req, res) {
       res.setHeader('Allow', 'GET, POST, DELETE');
       return statusJson(res, 405, { success: false, message: 'Method not allowed.' });
     }
+    // ---- Task 11: client & project management ----
+    if (parts[0] === 'clients' && parts.length === 1) return projectsApi.clientsCollection(req, res);
+    if (parts[0] === 'clients' && parts.length === 2) return projectsApi.clientItem(req, res, parts[1]);
+    if (parts[0] === 'projects' && parts.length === 3 && parts[2] === 'users' && method(req) === 'GET') return projectsApi.teamMembers(req, res);
+    if (parts[0] === 'projects' && parts.length === 1) return projectsApi.projectsCollection(req, res);
+    if (parts[0] === 'projects' && parts.length === 2) return projectsApi.projectItem(req, res, parts[1]);
     // Task 9: /api/admin/users and /api/admin/users/:id (ADMIN only)
     if (parts[0] === 'admin' && parts[1] === 'users') return handleAdminUsers(req, res);
     return statusJson(res, 404, { success: false, message: 'Not found.' });

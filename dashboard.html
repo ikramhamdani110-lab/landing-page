@@ -21,6 +21,7 @@
             <nav class="dash-nav">
                 <a href="#dashboard" class="dash-nav-item active" data-nav="dashboard"><i class='bx bxs-dashboard'></i> Dashboard</a>
                 <a href="#documents" class="dash-nav-item" data-nav="documents"><i class='bx bx-folder'></i> Documents</a>
+                <a href="#projects" class="dash-nav-item" data-nav="projects"><i class='bx bx-briefcase'></i> Projects</a>
                 <a href="#profile" class="dash-nav-item" data-nav="profile"><i class='bx bx-user'></i> Profile</a>
                 <a href="#settings" class="dash-nav-item" data-nav="settings"><i class='bx bx-cog'></i> Settings</a>
             </nav>
@@ -135,11 +136,96 @@
                         <!-- document cards rendered by documents-ui.js -->
                     </div>
                 </section>
+
+                <!-- ============ Project Management (Task 11) ============ -->
+                <section class="dash-panel hidden" id="panel-projects">
+                    <div class="dash-panel-head">
+                        <div>
+                            <h1 class="dash-welcome">Project Management</h1>
+                            <p class="dash-welcome-sub">Clients, projects and team assignments</p>
+                        </div>
+                        <div style="display:flex; gap:0.5rem;">
+                            <button class="btn btn-ghost btn-sm" id="projClientsBtn"><i class='bx bx-buildings'></i> Clients</button>
+                            <button class="btn btn-primary btn-sm hidden" id="projCreateBtn"><i class='bx bx-plus'></i> Create Project</button>
+                        </div>
+                    </div>
+
+                    <!-- Real statistics from the database -->
+                    <div class="proj-stats" id="projStats">
+                        <div class="proj-stat"><span class="proj-stat-num" id="statTotal">—</span><span class="proj-stat-label">Total Projects</span></div>
+                        <div class="proj-stat"><span class="proj-stat-num" id="statActive">—</span><span class="proj-stat-label">In Progress</span></div>
+                        <div class="proj-stat"><span class="proj-stat-num" id="statCompleted">—</span><span class="proj-stat-label">Completed</span></div>
+                        <div class="proj-stat"><span class="proj-stat-num" id="statOnHold">—</span><span class="proj-stat-label">On Hold</span></div>
+                    </div>
+
+                    <div class="form-message" id="projMessage" role="alert"></div>
+
+                    <!-- Create / edit form -->
+                    <article class="dash-card hidden" id="projFormCard">
+                        <header class="dash-card-head">
+                            <h2 id="projFormTitle">Create Project</h2>
+                            <button type="button" class="icon-btn" id="projFormClose" aria-label="Close"><i class='bx bx-x'></i></button>
+                        </header>
+                        <form id="projForm" novalidate>
+                            <div class="proj-form-grid">
+                                <label class="field"><span>Project name</span><input type="text" id="projName" maxlength="150" autocomplete="off"></label>
+                                <label class="field"><span>Client</span><select id="projClient"><option value="">Loading clients…</option></select></label>
+                                <label class="field"><span>Status</span>
+                                    <select id="projStatus">
+                                        <option value="NOT_STARTED">Not Started</option>
+                                        <option value="IN_PROGRESS">In Progress</option>
+                                        <option value="COMPLETED">Completed</option>
+                                        <option value="ON_HOLD">On Hold</option>
+                                    </select>
+                                </label>
+                                <label class="field proj-team-field"><span>Team members</span><div id="projTeamBoxes" class="proj-team-boxes"></div></label>
+                                <label class="field proj-desc-field"><span>Description</span><textarea id="projDesc" rows="3" maxlength="5000"></textarea></label>
+                            </div>
+                            <div class="form-message" id="projFormMessage" role="alert"></div>
+                            <div class="dash-edit-actions">
+                                <button type="button" class="btn btn-ghost" id="projCancelBtn">Cancel</button>
+                                <button type="submit" class="btn btn-primary" id="projSaveBtn">Create Project</button>
+                            </div>
+                        </form>
+                    </article>
+
+                    <div class="table-state" id="projLoading"><span class="dash-spinner"></span> Loading projects…</div>
+                    <div class="table-state hidden" id="projError"><i class='bx bx-error'></i> <span id="projErrorText">Something went wrong.</span></div>
+                    <div class="table-state hidden" id="projEmpty"><i class='bx bx-briefcase-alt-2'></i> No projects found.</div>
+
+                    <div class="dash-cards hidden" id="projListWrap">
+                        <!-- project cards rendered by projects-ui.js -->
+                    </div>
+                </section>
             </div>
         </main>
     </div>
 
+    <!-- ============ Clients management (Task 11, ADMIN) ============ -->
+    <div class="modal-overlay hidden" id="clientsModalOverlay">
+        <div class="modal modal-lg" role="dialog" aria-modal="true" aria-labelledby="clientsModalTitle">
+            <div class="modal-head">
+                <h3 id="clientsModalTitle">Clients</h3>
+                <button class="icon-btn" id="clientsModalClose" aria-label="Close"><i class='bx bx-x'></i></button>
+            </div>
+            <div id="clientsList" class="clients-list"></div>
+            <div class="form-message" id="clientsMessage" role="alert"></div>
+            <form id="clientForm" novalidate>
+                <h4 id="clientFormTitle" class="clients-form-title">Add Client</h4>
+                <div class="proj-form-grid">
+                    <label class="field"><span>Client name</span><input type="text" id="clientFormName" maxlength="120" autocomplete="off"></label>
+                    <label class="field"><span>Contact email (optional)</span><input type="email" id="clientFormEmail" maxlength="200" autocomplete="off"></label>
+                    <label class="field proj-desc-field"><span>Description (optional)</span><textarea id="clientFormDesc" rows="2" maxlength="2000"></textarea></label>
+                </div>
+                <div class="dash-edit-actions">
+                    <button type="submit" class="btn btn-primary" id="clientFormSave">Add Client</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="documents-ui.js"></script>
+    <script src="projects-ui.js"></script>
     <script src="dashboard.js"></script>
 </body>
 </html>

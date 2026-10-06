@@ -41,7 +41,15 @@ const PERMISSIONS = Object.freeze({
   SETTINGS_READ: 'settings:read',
   SETTINGS_UPDATE: 'settings:update',
   USERS_READ: 'users:read',
-  USERS_MANAGE: 'users:manage'
+  USERS_MANAGE: 'users:manage',
+  // Task 11 — client & project management
+  CLIENTS_READ: 'clients:read',
+  CLIENTS_MANAGE: 'clients:manage',
+  PROJECTS_READ: 'projects:read',
+  PROJECTS_CREATE: 'projects:create',
+  PROJECTS_UPDATE_ANY: 'projects:update:any',
+  PROJECTS_DELETE: 'projects:delete',
+  PROJECTS_ASSIGN: 'projects:assign'
 });
 
 // Role -> permission matrix. Single source of truth for the whole application.
@@ -50,12 +58,18 @@ const ROLE_PERMISSIONS = Object.freeze({
     PERMISSIONS.CONTENT_READ, PERMISSIONS.CONTENT_CREATE, PERMISSIONS.CONTENT_UPDATE, PERMISSIONS.CONTENT_DELETE,
     PERMISSIONS.SERVICES_READ, PERMISSIONS.SERVICES_CREATE, PERMISSIONS.SERVICES_UPDATE, PERMISSIONS.SERVICES_DELETE,
     PERMISSIONS.SETTINGS_READ, PERMISSIONS.SETTINGS_UPDATE,
-    PERMISSIONS.USERS_READ, PERMISSIONS.USERS_MANAGE
+    PERMISSIONS.USERS_READ, PERMISSIONS.USERS_MANAGE,
+    PERMISSIONS.CLIENTS_READ, PERMISSIONS.CLIENTS_MANAGE,
+    PERMISSIONS.PROJECTS_READ, PERMISSIONS.PROJECTS_CREATE, PERMISSIONS.PROJECTS_UPDATE_ANY,
+    PERMISSIONS.PROJECTS_DELETE, PERMISSIONS.PROJECTS_ASSIGN
   ]),
   [ROLES.EMPLOYEE]: Object.freeze([
     // View records and update permitted records/fields only. No create, no delete,
-    // no settings, and no user/role management.
-    PERMISSIONS.CONTENT_READ, PERMISSIONS.CONTENT_UPDATE
+    // no settings, and no user/role management. Task 11: a team member reads projects/
+    // clients they have access to and may update the status of assigned projects only.
+    PERMISSIONS.CONTENT_READ, PERMISSIONS.CONTENT_UPDATE,
+    PERMISSIONS.CLIENTS_READ,
+    PERMISSIONS.PROJECTS_READ
   ])
 });
 
